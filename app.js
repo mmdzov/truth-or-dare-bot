@@ -1,9 +1,15 @@
-const { session } = require("grammy");
+const { session, Keyboard } = require("grammy");
+const { customAlphabet } = require("nanoid");
 const bot = require("./config/require");
 const mainKeyboard = require("./keyboard/main-keyboard");
+const {
+  matchKeyboard,
+  matchPlayingKeyboard,
+} = require("./keyboard/match-keyboard");
 const playerCountKeyboard = require("./keyboard/playerCount-keyboard");
 const selectGender = require("./keyboard/select-gender");
 const settingKeyboard = require("./keyboard/setting_keyboard");
+const { startQueue, findUserBySexQueue } = require("./model/queue-model");
 const {
   newuser,
   viewUserSetting,
@@ -19,6 +25,7 @@ bot.use(
         waitForAddFriend: false,
         selectGender: false,
         selectTargetGender: false,
+        findPlayer: false,
       };
     },
   })
@@ -28,7 +35,7 @@ bot.command("start", (ctx) => {
   newuser({
     user_id: ctx.from.id,
     matchs: [],
-    user_unique_id: customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 8),
+    user_unique_id: customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 8)(),
     sex: "unavailable",
     visible_profile: false,
   });
@@ -119,9 +126,58 @@ bot.hears("انتخاب جنسیت", async (ctx) => {
   });
 });
 
+const handleStartQueue = async (ctx, multiplayer = 2, sex) => {
+  ctx.session.findPlayer = true;
+  const data = {
+    multiplayer,
+    user_id: ctx.from.id,
+    date: Date.now(),
+    sex,
+    target_finded: undefined,
+  };
+  let start = await startQueue(data);
+  if (start) {
+    await ctx.reply("درحال یافتن بازیکن...", {
+      reply_markup: {
+        keyboard: new Keyboard().text("بازگشت").keyboard,
+        resize_keyboard: true,
+      },
+    });
+    let queue = setInterval(() => newMatchUser(ctx), 8000);
+    async function newMatchUser(ctx) {
+      console.log(ctx.session.findPlayer);
+      if (ctx.session.findPlayer === false) {
+        return clearInterval(queue);
+      }
+      let res = await findUserBySexQueue(ctx.from.id, multiplayer, sex);
+      if (res?.target_user_id) {
+        ctx.reply("بازیکن یافت شد اول اون بازیو شروع میکنه دوست من", {
+          reply_markup: {
+            keyboard: matchKeyboard.keyboard,
+            resize_keyboard: true,
+          },
+        });
+        bot.api.sendMessage(
+          res.target_user_id,
+          `بازیکن یافت شد دوست من اول تو بازی رو شروع کن`,
+          {
+            reply_markup: {
+              keyboard: matchPlayingKeyboard.keyboard,
+              resize_keyboard: true,
+            },
+          }
+        );
+        ctx.session.findPlayer = false;
+        clearInterval(queue);
+      }
+    }
+  } else ctx.reply("خطایی رخ داده لطفا کمی بعد دوباره امتحان کنید");
+};
+
 bot.hears("آقا", async (ctx) => {
   if (ctx.session.selectTargetGender) {
-    //! start game
+    handleStartQueue(ctx, 2, "آقا");
+    return;
   }
   if (!ctx.session.selectGender) return;
   selectGenderUser(ctx.from.id, "آقا");
@@ -136,7 +192,8 @@ bot.hears("آقا", async (ctx) => {
 
 bot.hears("خانم", async (ctx) => {
   if (ctx.session.selectTargetGender) {
-    //! start game
+    handleStartQueue(ctx, 2, "خانم");
+    return;
   }
   if (!ctx.session.selectGender) return;
   selectGenderUser(ctx.from.id, "خانم");
