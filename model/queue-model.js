@@ -12,7 +12,7 @@ class QueueModel {
       return Promise.resolve({ startQueue: false });
     }
   }
-  async findUserBySexQueue(user_id, multiplayer, sex) {
+  async findAndNewMatch(user_id, multiplayer, sex) {
     try {
       let result = await queue.find({
         multiplayer,
@@ -20,8 +20,8 @@ class QueueModel {
       });
       let current_user = await queue.find({ user_id });
       current_user = current_user[current_user.length - 1];
-      if (current_user?.target_finded !== 0) {
-        newMatch({
+      if (current_user?.target_finded) {
+        let new_match_data = await newMatch({
           players: [
             {
               user_id: current_user?.target_finded,
@@ -39,7 +39,11 @@ class QueueModel {
         });
         await queue.findOneAndDelete({ user_id });
         await queue.findOneAndDelete({ user_id: current_user?.target_finded });
-        return { target_user_id: current_user?.target_finded, user_id };
+        return {
+          target_user_id: current_user?.target_finded,
+          user_id,
+          new_match_data,
+        };
       }
       result = result.filter(
         (item) => item.user_id !== user_id && item?.target_finded === 0

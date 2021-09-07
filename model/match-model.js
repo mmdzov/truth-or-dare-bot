@@ -4,7 +4,15 @@ class MatchModel {
   async newMatch(data) {
     try {
       let result = await match.create(data);
-      console.log(result);
+      return result;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  async findMatch(user_id) {
+    try {
+      let result = await match.find({ user_id })[0];
+      return result;
     } catch (e) {
       console.log(e);
     }

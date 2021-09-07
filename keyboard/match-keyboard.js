@@ -7,7 +7,7 @@ const matchKeyboard = new Keyboard()
   .text("خروج از بازی");
 
 const matchPlayingKeyboard = new Keyboard()
-  .text("بپرس شجاعت یا حققیقت")
+  .text("بپرس شجاعت یا حقیقت")
   .row()
   .text("گفتگو با بازیکن")
   .text("گزارش بازیکن")

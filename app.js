@@ -9,7 +9,8 @@ const {
 const playerCountKeyboard = require("./keyboard/playerCount-keyboard");
 const selectGender = require("./keyboard/select-gender");
 const settingKeyboard = require("./keyboard/setting_keyboard");
-const { startQueue, findUserBySexQueue } = require("./model/queue-model");
+const { findMatch } = require("./model/match-model");
+const { startQueue, findAndNewMatch } = require("./model/queue-model");
 const {
   newuser,
   viewUserSetting,
@@ -125,7 +126,7 @@ bot.hears("انتخاب جنسیت", async (ctx) => {
     },
   });
 });
-
+let queue;
 const handleStartQueue = async (ctx, multiplayer = 2, sex) => {
   ctx.session.findPlayer = true;
   const data = {
@@ -143,14 +144,22 @@ const handleStartQueue = async (ctx, multiplayer = 2, sex) => {
         resize_keyboard: true,
       },
     });
-    let queue = setInterval(() => newMatchUser(ctx), 8000);
+    function ChangeFindPlayer() {
+      ctx.session.findPlayer = false;
+      console.log("inside change" + ctx.session.findPlayer);
+    }
+    queue = setInterval(() => newMatchUser(ctx), 8000);
     async function newMatchUser(ctx) {
-      console.log(ctx.session.findPlayer);
       if (ctx.session.findPlayer === false) {
         return clearInterval(queue);
       }
-      let res = await findUserBySexQueue(ctx.from.id, multiplayer, sex);
-      if (res?.target_user_id) {
+      let res = await findAndNewMatch(ctx.from.id, multiplayer, sex);
+      console.log(res?.new_match_data);
+      if (
+        res?.new_match_data?.players.filter(
+          (item) => item.user_id === ctx.from.id
+        ).length > 0
+      ) {
         ctx.reply("بازیکن یافت شد اول اون بازیو شروع میکنه دوست من", {
           reply_markup: {
             keyboard: matchKeyboard.keyboard,
@@ -168,11 +177,157 @@ const handleStartQueue = async (ctx, multiplayer = 2, sex) => {
           }
         );
         ctx.session.findPlayer = false;
+        console.log(ctx.session);
+        ChangeFindPlayer();
         clearInterval(queue);
       }
     }
   } else ctx.reply("خطایی رخ داده لطفا کمی بعد دوباره امتحان کنید");
 };
+
+bot.hears("بپرس شجاعت یا حقیقت", (ctx) => {
+  let match = findMatch(ctx.from.id);
+  if (match) {
+    let turn = match.players[match.turn - 1];
+    if (turn.user_id === ctx.from.id) {
+      ctx.reply("ارسال شد منتظر جواب باش دوست من");
+      bot.api.sendMessage(
+        match.players.filter((item) => item.user_id !== ctx.from.id)[0].user_id,
+        "شجاعت یا حقیقت؟",
+        {
+          reply_markup: {
+            keyboard: new Keyboard().text("شجاعت").row().text("حقیقت").keyboard,
+            resize_keyboard: true,
+          },
+        }
+      );
+    } else {
+      ctx.reply("دوست من, هنوز نوبتت نشده");
+    }
+  }
+});
+
+bot.hears("شجاعت", (ctx) => {
+  let match = findMatch(ctx.from.id);
+  if (match) {
+    let turn = match.players[match.turn - 1];
+    if (turn.user_id !== ctx.from.id) {
+      ctx.reply("تو خیلی شجاعی دوست من منتظر باش که بهت بگه چیکار کنی", {
+        reply_markup: {
+          keyboard: matchPlayingKeyboard.keyboard,
+          resize_keyboard: true,
+        },
+      });
+      bot.api.sendMessage(
+        match.players.filter((item) => item.user_id !== ctx.from.id)[0].user_id,
+        "دوستت شجاعت رو انتخاب کرد حالا کاری که میخوای انجام بده رو بهش بگو",
+        {
+          reply_markup: {
+            keyboard: matchPlayingKeyboard.keyboard,
+            resize_keyboard: true,
+          },
+        }
+      );
+    } else {
+      ctx.reply("دوست من, هنوز نوبتت نشده");
+    }
+  }
+});
+
+bot.hears("گزارش بازیکن", (ctx) => {
+  ctx.reply(
+    "علت گزارش علیه بازیکن را در قالب یک پیام بفرستید استفاده از الفاظ رکیک با مسدود کردن شما توسط ربات و نادیده گرفتن گزارش شما همراه خواهد بود",
+    {
+      reply_markup: {
+        keyboard: new Keyboard().text("ثبت گزارش").row().text("لغو گزارش")
+          .keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+});
+
+bot.hears("ثبت گزارش", (ctx) => {
+  ctx.reply("گزارش ثبت شد و بازی را به اتمام رساندید به منوی اصلی برگشتید", {
+    reply_markup: {
+      keyboard: mainKeyboard.keyboard,
+      resize_keyboard: true,
+    },
+  });
+});
+
+bot.hears("لغو گزارش", (ctx) => {
+  ctx.reply("گزارش لغو شد به منوی بازی برگشتید", {
+    reply_markup: {
+      keyboard: matchPlayingKeyboard.keyboard,
+      resize_keyboard: true,
+    },
+  });
+});
+
+bot.hears("خروج از بازی", (ctx) => {
+  ctx.reply(
+    `آیا اطمینان دارید؟
+اگر از بازی خارج شوید بازیکن مقابل می تواند برای شما گزارش رد کند یا شما را مسدود کند که در صورت مشاهده ده اخطار شما اجازه استفاده ار ربات را ندارید `,
+    {
+      reply_markup: {
+        keyboard: new Keyboard()
+          .text("بله می خواهم خارج شوم")
+          .row()
+          .text("خیر می خواهم ادامه دهم").keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+});
+
+bot.hears("گفتگو با بازیکن", (ctx) => {
+  ctx.reply(
+    `می توانید با بازیکن مقابل چت کنید هر زمان خواستید به منوی اصلی برگردید لطفا روی لغو گفتگو بزنید`,
+    {
+      reply_markup: {
+        keyboard: new Keyboard().text("لغو گفتگو").keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+});
+
+bot.hears("لغو گفتگو", (ctx) => {
+  ctx.reply(`گفتگو با بازیکن لغو شد به منوی بازی برگشتید`, {
+    reply_markup: {
+      keyboard: matchPlayingKeyboard.keyboard,
+      resize_keyboard: true,
+    },
+  });
+});
+
+bot.hears("حقیقت", (ctx) => {
+  let match = findMatch(ctx.from.id);
+  if (match) {
+    let turn = match.players[match.turn - 1];
+    if (turn.user_id !== ctx.from.id) {
+      ctx.reply("منتظر باش ازت سوال بپرسه", {
+        reply_markup: {
+          keyboard: matchPlayingKeyboard.keyboard,
+          resize_keyboard: true,
+        },
+      });
+      bot.api.sendMessage(
+        match.players.filter((item) => item.user_id !== ctx.from.id)[0].user_id,
+        "دوستت حقیقت رو انتخاب کرد حالا یه سوال ازش بپرس",
+        {
+          reply_markup: {
+            keyboard: matchPlayingKeyboard.keyboard,
+            resize_keyboard: true,
+          },
+        }
+      );
+    } else {
+      ctx.reply("دوست من, هنوز نوبتت نشده");
+    }
+  }
+});
 
 bot.hears("آقا", async (ctx) => {
   if (ctx.session.selectTargetGender) {
@@ -227,17 +382,18 @@ bot.hears("بازی دوستانه", (ctx) => {
 
 bot.hears(/[نفره]/g, (ctx) => {
   //   if (!ctx.session.select) return;
-  let count = +ctx.message.text.match(/[0-9]/g)[0];
-  if (count === 2) {
-    ctx.session.selectTargetGender = true;
-    ctx.reply(`دوست داری طرف مقابلت خانم باشه یا آقا؟`, {
-      reply_markup: {
-        keyboard: selectGender.keyboard,
-        resize_keyboard: true,
-      },
-    });
-  }
-  console.log();
+  try {
+    let count = +ctx.message.text.match(/[0-9]/g)[0];
+    if (count === 2) {
+      ctx.session.selectTargetGender = true;
+      ctx.reply(`دوست داری طرف مقابلت خانم باشه یا آقا؟`, {
+        reply_markup: {
+          keyboard: selectGender.keyboard,
+          resize_keyboard: true,
+        },
+      });
+    }
+  } catch (e) {}
 });
 
 bot.start();
