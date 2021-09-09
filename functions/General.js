@@ -49,7 +49,8 @@ class General {
 
   async callbackQueryData(ctx) {
     let data = ctx.callbackQuery.data;
-    if (!data.includes("hiddenMessages")) return;
+    if (!data.includes("hiddenMessages") || !data.includes("showMessages"))
+      return;
     let match = await findMatch(ctx.from.id);
     if (!match) {
       ctx.reply("شما هنوز بازی شروع نکردید");
