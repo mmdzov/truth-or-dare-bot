@@ -26,11 +26,13 @@ class QueueModel {
             {
               user_id: current_user?.target_finded,
               capacity: 10,
+              turn: true,
               done: 0,
             },
             {
               user_id: user_id,
               capacity: 10,
+              turn: false,
               done: 0,
             },
           ],

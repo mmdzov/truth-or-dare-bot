@@ -1,15 +1,22 @@
 const { session, Keyboard } = require("grammy");
 const { customAlphabet } = require("nanoid");
 const bot = require("./config/require");
+const DuoPlay = require("./functions/duoPlay");
+const General = require("./functions/General");
+const { reply, send } = require("./functions/msg");
 const mainKeyboard = require("./keyboard/main-keyboard");
-const {
-  matchKeyboard,
-  matchPlayingKeyboard,
-} = require("./keyboard/match-keyboard");
+const { matchPlayingKeyboard } = require("./keyboard/match-keyboard");
 const playerCountKeyboard = require("./keyboard/playerCount-keyboard");
 const selectGender = require("./keyboard/select-gender");
 const settingKeyboard = require("./keyboard/setting_keyboard");
-const { findMatch } = require("./model/match-model");
+const {
+  findMatch,
+  selectMatchSenderReceiver,
+  changeNextTurn,
+  setAnswer,
+  clearAnswers,
+  selectPlayerTurn,
+} = require("./model/match-model");
 const { startQueue, findAndNewMatch } = require("./model/queue-model");
 const {
   newuser,
@@ -27,12 +34,32 @@ bot.use(
         selectGender: false,
         selectTargetGender: false,
         findPlayer: false,
+        player: {
+          report: false,
+          inGame: false,
+          truthOrDare: {
+            truth: false,
+            dare: false,
+          },
+          leftGame: false,
+          chat: false,
+          count_players: 0,
+          limitInPerTurn: 0,
+          sended: false,
+        },
+        otherPlayer: {
+          truthOrDare: {
+            truth: false,
+            dare: false,
+          },
+          done: false,
+        },
       };
     },
   })
 );
 
-bot.command("start", (ctx) => {
+bot.command("start", (ctx, next) => {
   newuser({
     user_id: ctx.from.id,
     matchs: [],
@@ -50,9 +77,10 @@ bot.command("start", (ctx) => {
       },
     }
   );
+  return next();
 });
 
-bot.hears("بازی آنلاین", (ctx) => {
+bot.hears("بازی آنلاین", (ctx, next) => {
   ctx.session.select = "online";
   ctx.reply(
     `خیلی خب دوست من
@@ -65,17 +93,19 @@ bot.hears("بازی آنلاین", (ctx) => {
       },
     }
   );
+  return next();
 });
 
-bot.hears("افزودن دوست", (ctx) => {
+bot.hears("افزودن دوست", (ctx, next) => {
   ctx.session.waitForAddFriend = true;
   ctx.reply(
     `خیلی خب دوست من
 آیدی بازیکن یا یوزرنیم اون خوشبختت رو برام بفرست تا به لیست دوستات اضافش کنم`
   );
+  return next();
 });
 
-bot.hears("بازگشت", (ctx) => {
+bot.hears("بازگشت", (ctx, next) => {
   ctx.reply(`دستورت چیه دوست من`, {
     reply_markup: {
       keyboard: ctx.session.selectGender
@@ -85,9 +115,10 @@ bot.hears("بازگشت", (ctx) => {
     },
   });
   ctx.session.selectGender = false;
+  return next();
 });
 
-bot.hears("مشاهده تنظیمات فعلی", async (ctx) => {
+bot.hears("مشاهده تنظیمات فعلی", async (ctx, next) => {
   let data = await viewUserSetting(ctx.from.id);
   ctx.reply(
     `
@@ -106,18 +137,20 @@ bot.hears("مشاهده تنظیمات فعلی", async (ctx) => {
 بازی های شما : ${data.matchs || 0}`,
     { parse_mode: "Markdown" }
   );
+  return next();
 });
 
-bot.hears("نمایش پروفایل برای بازیکنان", async (ctx) => {
+bot.hears("نمایش پروفایل برای بازیکنان", async (ctx, next) => {
   let visibleProfileEnabled = await visibleUserProfile(ctx.from.id);
   ctx.reply(
     `نمایش پروفایل شما برای دیگر بازیکنان ${
       visibleProfileEnabled ? "غیر فعال" : "فعال"
     } شد`
   );
+  return next();
 });
 
-bot.hears("انتخاب جنسیت", async (ctx) => {
+bot.hears("انتخاب جنسیت", async (ctx, next) => {
   ctx.session.selectGender = true;
   ctx.reply(`انتخاب کن دوست من`, {
     reply_markup: {
@@ -125,72 +158,16 @@ bot.hears("انتخاب جنسیت", async (ctx) => {
       resize_keyboard: true,
     },
   });
+  return next();
 });
-let queue;
-const handleStartQueue = async (ctx, multiplayer = 2, sex) => {
-  ctx.session.findPlayer = true;
-  const data = {
-    multiplayer,
-    user_id: ctx.from.id,
-    date: Date.now(),
-    sex,
-    target_finded: undefined,
-  };
-  let start = await startQueue(data);
-  if (start) {
-    await ctx.reply("درحال یافتن بازیکن...", {
-      reply_markup: {
-        keyboard: new Keyboard().text("بازگشت").keyboard,
-        resize_keyboard: true,
-      },
-    });
-    function ChangeFindPlayer() {
-      ctx.session.findPlayer = false;
-      console.log("inside change" + ctx.session.findPlayer);
-    }
-    queue = setInterval(() => newMatchUser(ctx), 8000);
-    async function newMatchUser(ctx) {
-      if (ctx.session.findPlayer === false) {
-        return clearInterval(queue);
-      }
-      let res = await findAndNewMatch(ctx.from.id, multiplayer, sex);
-      console.log(res?.new_match_data);
-      if (
-        res?.new_match_data?.players.filter(
-          (item) => item.user_id === ctx.from.id
-        ).length > 0
-      ) {
-        ctx.reply("بازیکن یافت شد اول اون بازیو شروع میکنه دوست من", {
-          reply_markup: {
-            keyboard: matchKeyboard.keyboard,
-            resize_keyboard: true,
-          },
-        });
-        bot.api.sendMessage(
-          res.target_user_id,
-          `بازیکن یافت شد دوست من اول تو بازی رو شروع کن`,
-          {
-            reply_markup: {
-              keyboard: matchPlayingKeyboard.keyboard,
-              resize_keyboard: true,
-            },
-          }
-        );
-        ctx.session.findPlayer = false;
-        console.log(ctx.session);
-        ChangeFindPlayer();
-        clearInterval(queue);
-      }
-    }
-  } else ctx.reply("خطایی رخ داده لطفا کمی بعد دوباره امتحان کنید");
-};
 
-bot.hears("بپرس شجاعت یا حقیقت", (ctx) => {
-  let match = findMatch(ctx.from.id);
+bot.hears("بپرس شجاعت یا حقیقت", async (ctx, next) => {
+  let match = await findMatch(ctx.from.id);
   if (match) {
     let turn = match.players[match.turn - 1];
     if (turn.user_id === ctx.from.id) {
       ctx.reply("ارسال شد منتظر جواب باش دوست من");
+      ctx.session.player.sended = true;
       bot.api.sendMessage(
         match.players.filter((item) => item.user_id !== ctx.from.id)[0].user_id,
         "شجاعت یا حقیقت؟",
@@ -205,11 +182,14 @@ bot.hears("بپرس شجاعت یا حقیقت", (ctx) => {
       ctx.reply("دوست من, هنوز نوبتت نشده");
     }
   }
+  return next();
 });
 
-bot.hears("شجاعت", (ctx) => {
-  let match = findMatch(ctx.from.id);
+bot.hears("شجاعت", async (ctx, next) => {
+  let match = await findMatch(ctx.from.id);
   if (match) {
+    ctx.session.player.truthOrDare.truth = false;
+    ctx.session.player.truthOrDare.dare = true;
     let turn = match.players[match.turn - 1];
     if (turn.user_id !== ctx.from.id) {
       ctx.reply("تو خیلی شجاعی دوست من منتظر باش که بهت بگه چیکار کنی", {
@@ -218,8 +198,12 @@ bot.hears("شجاعت", (ctx) => {
           resize_keyboard: true,
         },
       });
+      let current_user = match.players.filter(
+        (item) => item.user_id !== ctx.from.id
+      )[0].user_id;
+      await selectPlayerTurn(ctx.from.id, current_user, false);
       bot.api.sendMessage(
-        match.players.filter((item) => item.user_id !== ctx.from.id)[0].user_id,
+        current_user,
         "دوستت شجاعت رو انتخاب کرد حالا کاری که میخوای انجام بده رو بهش بگو",
         {
           reply_markup: {
@@ -228,13 +212,50 @@ bot.hears("شجاعت", (ctx) => {
           },
         }
       );
+      await selectMatchSenderReceiver(current_user, ctx.from.id);
     } else {
       ctx.reply("دوست من, هنوز نوبتت نشده");
     }
   }
+  return next();
 });
 
-bot.hears("گزارش بازیکن", (ctx) => {
+bot.hears("حقیقت", async (ctx, next) => {
+  let match = await findMatch(ctx.from.id);
+  if (match) {
+    ctx.session.player.truthOrDare.truth = true;
+    ctx.session.player.truthOrDare.dare = false;
+    let turn = match.players[match.turn - 1];
+    if (turn.user_id !== ctx.from.id) {
+      ctx.reply("منتظر باش ازت سوال بپرسه", {
+        reply_markup: {
+          keyboard: matchPlayingKeyboard.keyboard,
+          resize_keyboard: true,
+        },
+      });
+      let current_user = match.players.filter(
+        (item) => item.user_id !== ctx.from.id
+      )[0].user_id;
+      await selectPlayerTurn(ctx.from.id, current_user, false);
+      bot.api.sendMessage(
+        current_user,
+        "دوستت حقیقت رو انتخاب کرد حالا یه سوال ازش بپرس",
+        {
+          reply_markup: {
+            keyboard: matchPlayingKeyboard.keyboard,
+            resize_keyboard: true,
+          },
+        }
+      );
+      await selectMatchSenderReceiver(current_user, ctx.from.id);
+    } else {
+      ctx.reply("دوست من, هنوز نوبتت نشده");
+    }
+  }
+  return next();
+});
+
+bot.hears("گزارش بازیکن", (ctx, next) => {
   ctx.reply(
     "علت گزارش علیه بازیکن را در قالب یک پیام بفرستید استفاده از الفاظ رکیک با مسدود کردن شما توسط ربات و نادیده گرفتن گزارش شما همراه خواهد بود",
     {
@@ -245,27 +266,30 @@ bot.hears("گزارش بازیکن", (ctx) => {
       },
     }
   );
+  return next();
 });
 
-bot.hears("ثبت گزارش", (ctx) => {
+bot.hears("ثبت گزارش", (ctx, next) => {
   ctx.reply("گزارش ثبت شد و بازی را به اتمام رساندید به منوی اصلی برگشتید", {
     reply_markup: {
       keyboard: mainKeyboard.keyboard,
       resize_keyboard: true,
     },
   });
+  return next();
 });
 
-bot.hears("لغو گزارش", (ctx) => {
+bot.hears("لغو گزارش", (ctx, next) => {
   ctx.reply("گزارش لغو شد به منوی بازی برگشتید", {
     reply_markup: {
       keyboard: matchPlayingKeyboard.keyboard,
       resize_keyboard: true,
     },
   });
+  return next();
 });
 
-bot.hears("خروج از بازی", (ctx) => {
+bot.hears("خروج از بازی", (ctx, next) => {
   ctx.reply(
     `آیا اطمینان دارید؟
 اگر از بازی خارج شوید بازیکن مقابل می تواند برای شما گزارش رد کند یا شما را مسدود کند که در صورت مشاهده ده اخطار شما اجازه استفاده ار ربات را ندارید `,
@@ -279,9 +303,31 @@ bot.hears("خروج از بازی", (ctx) => {
       },
     }
   );
+  return next();
 });
 
-bot.hears("گفتگو با بازیکن", (ctx) => {
+bot.hears("بله می خواهم خارج شوم", (ctx, next) => {
+  ctx.reply("از بازی خارج شدی و به منوی اصلی بازگشتی دوست من", {
+    reply_markup: {
+      keyboard: mainKeyboard.keyboard,
+      resize_keyboard: true,
+    },
+  });
+  return next();
+});
+
+bot.hears("خیر می خواهم ادامه دهم", (ctx, next) => {
+  ctx.reply("خوشحالم که می خوای بازی رو ادامه بدی دوست من", {
+    reply_markup: {
+      keyboard: matchPlayingKeyboard.keyboard,
+      resize_keyboard: true,
+    },
+  });
+  return next();
+});
+
+bot.hears("گفتگو با بازیکن", (ctx, next) => {
+  ctx.session.player.chat = true;
   ctx.reply(
     `می توانید با بازیکن مقابل چت کنید هر زمان خواستید به منوی اصلی برگردید لطفا روی لغو گفتگو بزنید`,
     {
@@ -291,47 +337,23 @@ bot.hears("گفتگو با بازیکن", (ctx) => {
       },
     }
   );
+  return next();
 });
 
-bot.hears("لغو گفتگو", (ctx) => {
+bot.hears("لغو گفتگو", (ctx, next) => {
+  ctx.session.player.chat = false;
   ctx.reply(`گفتگو با بازیکن لغو شد به منوی بازی برگشتید`, {
     reply_markup: {
       keyboard: matchPlayingKeyboard.keyboard,
       resize_keyboard: true,
     },
   });
+  return next();
 });
 
-bot.hears("حقیقت", (ctx) => {
-  let match = findMatch(ctx.from.id);
-  if (match) {
-    let turn = match.players[match.turn - 1];
-    if (turn.user_id !== ctx.from.id) {
-      ctx.reply("منتظر باش ازت سوال بپرسه", {
-        reply_markup: {
-          keyboard: matchPlayingKeyboard.keyboard,
-          resize_keyboard: true,
-        },
-      });
-      bot.api.sendMessage(
-        match.players.filter((item) => item.user_id !== ctx.from.id)[0].user_id,
-        "دوستت حقیقت رو انتخاب کرد حالا یه سوال ازش بپرس",
-        {
-          reply_markup: {
-            keyboard: matchPlayingKeyboard.keyboard,
-            resize_keyboard: true,
-          },
-        }
-      );
-    } else {
-      ctx.reply("دوست من, هنوز نوبتت نشده");
-    }
-  }
-});
-
-bot.hears("آقا", async (ctx) => {
+bot.hears("آقا", async (ctx, next) => {
   if (ctx.session.selectTargetGender) {
-    handleStartQueue(ctx, 2, "آقا");
+    new DuoPlay(ctx).handleStartQueue(ctx, 2, "آقا");
     return;
   }
   if (!ctx.session.selectGender) return;
@@ -343,11 +365,12 @@ bot.hears("آقا", async (ctx) => {
     },
   });
   ctx.session.selectGender = false;
+  return next();
 });
 
-bot.hears("خانم", async (ctx) => {
+bot.hears("خانم", async (ctx, next) => {
   if (ctx.session.selectTargetGender) {
-    handleStartQueue(ctx, 2, "خانم");
+    new DuoPlay(ctx).handleStartQueue(ctx, 2, "خانم");
     return;
   }
   if (!ctx.session.selectGender) return;
@@ -359,18 +382,20 @@ bot.hears("خانم", async (ctx) => {
     },
   });
   ctx.session.selectGender = false;
+  return next();
 });
 
-bot.hears("تنظیمات", (ctx) => {
+bot.hears("تنظیمات", (ctx, next) => {
   ctx.reply(`دستورت چیه دوست من`, {
     reply_markup: {
       keyboard: settingKeyboard.keyboard,
       resize_keyboard: true,
     },
   });
+  return next();
 });
 
-bot.hears("بازی دوستانه", (ctx) => {
+bot.hears("بازی دوستانه", (ctx, next) => {
   ctx.session.select = "friendship";
   //     ctx.reply(`آیدی یا یوزرنیم تمام دوستاتو توی یه قالب یه پیام برام بفرست
   //   می تونی برای دوستای فعلیت دعوت نامه بفرستی`,{
@@ -378,9 +403,10 @@ bot.hears("بازی دوستانه", (ctx) => {
   //           inline_keyboard:
   //       }
   //   });
+  return next();
 });
 
-bot.hears(/[نفره]/g, (ctx) => {
+bot.hears(/[نفره]/g, (ctx, next) => {
   //   if (!ctx.session.select) return;
   try {
     let count = +ctx.message.text.match(/[0-9]/g)[0];
@@ -394,6 +420,16 @@ bot.hears(/[نفره]/g, (ctx) => {
       });
     }
   } catch (e) {}
+  return next();
 });
 
+bot.on("callback_query:data", (ctx) => {
+  new General().callbackQueryData(ctx);
+});
+
+bot.on("message", async (ctx, next) => {
+  new DuoPlay().truthOrDareMessage(ctx);
+  new General().chat(ctx);
+  return next();
+});
 bot.start();

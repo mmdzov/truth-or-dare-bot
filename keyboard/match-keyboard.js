@@ -1,11 +1,5 @@
 const { Keyboard } = require("grammy");
 
-const matchKeyboard = new Keyboard()
-  .text("گفتگو با بازیکن")
-  .text("گزارش بازیکن")
-  .row()
-  .text("خروج از بازی");
-
 const matchPlayingKeyboard = new Keyboard()
   .text("بپرس شجاعت یا حقیقت")
   .row()
@@ -14,4 +8,4 @@ const matchPlayingKeyboard = new Keyboard()
   .row()
   .text("خروج از بازی");
 
-module.exports = { matchKeyboard, matchPlayingKeyboard };
+module.exports = { matchPlayingKeyboard };
