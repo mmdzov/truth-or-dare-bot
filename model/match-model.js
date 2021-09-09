@@ -1,4 +1,7 @@
-const { findOneAndUpdate } = require("../schema/match-schema");
+const {
+  findOneAndUpdate,
+  findOneAndDelete,
+} = require("../schema/match-schema");
 const match = require("../schema/match-schema");
 
 class MatchModel {
@@ -190,6 +193,14 @@ class MatchModel {
         return { showing: true };
       }
       return { alreadyShow: true };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  async exitMatch(user_id) {
+    try {
+      const current_match = await new MatchModel().findMatch(user_id);
+      await findOneAndDelete({ _id: current_match._id });
     } catch (e) {
       console.log(e);
     }

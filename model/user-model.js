@@ -36,6 +36,21 @@ class UserModel {
       console.log(e);
     }
   }
+  async addReport(user_id, report = { user_id: 0, message: "" }) {
+    try {
+      const userFinded = user.findOne({ user_id });
+      if (!userFinded?.reports) userFinded.reports = [];
+      let beforeExist =
+        userFinded.reports.filter((item) => item.user_id === report.user_id)
+          .length > 0;
+      if (beforeExist) return { alreadyReported: true };
+      userFinded.reports.push(report);
+      await findOneAndUpdate({ user_id }, { reports: userFinded.reports });
+      return { report: true };
+    } catch (e) {
+      console.log(e);
+    }
+  }
 }
 
 module.exports = new UserModel();

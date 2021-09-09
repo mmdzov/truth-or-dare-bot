@@ -24,6 +24,7 @@ const {
   visibleUserProfile,
   selectGenderUser,
 } = require("./model/user-model");
+const general = new General();
 
 bot.use(
   session({
@@ -36,6 +37,7 @@ bot.use(
         findPlayer: false,
         player: {
           report: false,
+          report_message: {},
           inGame: false,
           truthOrDare: {
             truth: false,
@@ -256,6 +258,7 @@ bot.hears("حقیقت", async (ctx, next) => {
 });
 
 bot.hears("گزارش بازیکن", (ctx, next) => {
+  ctx.session.player.report = true;
   ctx.reply(
     "علت گزارش علیه بازیکن را در قالب یک پیام بفرستید استفاده از الفاظ رکیک با مسدود کردن شما توسط ربات و نادیده گرفتن گزارش شما همراه خواهد بود",
     {
@@ -270,6 +273,7 @@ bot.hears("گزارش بازیکن", (ctx, next) => {
 });
 
 bot.hears("ثبت گزارش", (ctx, next) => {
+  general.duoAcceptSendReportPlayer(ctx)
   ctx.reply("گزارش ثبت شد و بازی را به اتمام رساندید به منوی اصلی برگشتید", {
     reply_markup: {
       keyboard: mainKeyboard.keyboard,
@@ -280,6 +284,8 @@ bot.hears("ثبت گزارش", (ctx, next) => {
 });
 
 bot.hears("لغو گزارش", (ctx, next) => {
+  ctx.session.player.report = false;
+  ctx.session.player.report_message = {};
   ctx.reply("گزارش لغو شد به منوی بازی برگشتید", {
     reply_markup: {
       keyboard: matchPlayingKeyboard.keyboard,
@@ -424,12 +430,13 @@ bot.hears(/[نفره]/g, (ctx, next) => {
 });
 
 bot.on("callback_query:data", (ctx) => {
-  new General().callbackQueryData(ctx);
+  general.callbackQueryData(ctx);
 });
 
 bot.on("message", async (ctx, next) => {
   new DuoPlay().truthOrDareMessage(ctx);
-  new General().chat(ctx);
+  general.chat(ctx);
+  general.duoReporPlayer(ctx);
   return next();
 });
 bot.start();

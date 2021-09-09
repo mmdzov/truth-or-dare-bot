@@ -7,6 +7,7 @@ let schema = new Schema({
   sex: { type: String },
   matchs: { type: Number },
   visible_profile: { type: Boolean },
+  reports: { type: Array },
 });
 
 const user = mongoose.model("users", schema);
