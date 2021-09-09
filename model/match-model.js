@@ -197,10 +197,26 @@ class MatchModel {
       console.log(e);
     }
   }
+  async deleteMatch(user_id) {
+    try {
+      const current_match = await new MatchModel().findMatch(user_id);
+      await match.findOneAndDelete({ _id: current_match._id });
+    } catch (e) {
+      console.log(e);
+    }
+  }
   async exitMatch(user_id) {
     try {
       const current_match = await new MatchModel().findMatch(user_id);
-      await findOneAndDelete({ _id: current_match._id });
+      let players = current_match.players.filter(
+        (item) => item.user_id !== user_id
+      );
+      if (players.length === 1) {
+        new MatchModel().deleteMatch(user_id);
+        return { delete: true };
+      }
+      await match.findOneAndUpdate({ _id: current_match._id }, { players });
+      return { leave: true };
     } catch (e) {
       console.log(e);
     }

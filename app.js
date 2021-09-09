@@ -43,7 +43,7 @@ bot.use(
             truth: false,
             dare: false,
           },
-          leftGame: false,
+          leave_game: false,
           chat: false,
           count_players: 0,
           limitInPerTurn: 0,
@@ -273,7 +273,7 @@ bot.hears("گزارش بازیکن", (ctx, next) => {
 });
 
 bot.hears("ثبت گزارش", (ctx, next) => {
-  general.duoAcceptSendReportPlayer(ctx)
+  general.duoAcceptSendReportPlayer(ctx);
   ctx.reply("گزارش ثبت شد و بازی را به اتمام رساندید به منوی اصلی برگشتید", {
     reply_markup: {
       keyboard: mainKeyboard.keyboard,
@@ -296,6 +296,7 @@ bot.hears("لغو گزارش", (ctx, next) => {
 });
 
 bot.hears("خروج از بازی", (ctx, next) => {
+  ctx.session.player.leave_game = true;
   ctx.reply(
     `آیا اطمینان دارید؟
 اگر از بازی خارج شوید بازیکن مقابل می تواند برای شما گزارش رد کند یا شما را مسدود کند که در صورت مشاهده ده اخطار شما اجازه استفاده ار ربات را ندارید `,
@@ -313,6 +314,7 @@ bot.hears("خروج از بازی", (ctx, next) => {
 });
 
 bot.hears("بله می خواهم خارج شوم", (ctx, next) => {
+  general.leaveGame(ctx);
   ctx.reply("از بازی خارج شدی و به منوی اصلی بازگشتی دوست من", {
     reply_markup: {
       keyboard: mainKeyboard.keyboard,
@@ -323,6 +325,7 @@ bot.hears("بله می خواهم خارج شوم", (ctx, next) => {
 });
 
 bot.hears("خیر می خواهم ادامه دهم", (ctx, next) => {
+  ctx.session.player.leave_game = false;
   ctx.reply("خوشحالم که می خوای بازی رو ادامه بدی دوست من", {
     reply_markup: {
       keyboard: matchPlayingKeyboard.keyboard,

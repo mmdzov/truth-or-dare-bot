@@ -5,6 +5,7 @@ const {
   findMatch,
   hiddenMesssagePlayer,
   showMesssagePlayer,
+  deleteMatch,
   exitMatch,
 } = require("../model/match-model");
 const { addReport } = require("../model/user-model");
@@ -110,7 +111,7 @@ class General {
         ctx.reply("کاربر قبلا مسدود شده");
         return;
       } else if (result.report) {
-        await exitMatch(ctx.from.id);
+        await deleteMatch(ctx.from.id);
         ctx.reply("کاربر مسدود شد و بازی را به اتمام رساندید دوست من", {
           reply_markup: {
             keyboard: mainKeyboard.keyboard,
@@ -132,6 +133,60 @@ class General {
           }
         );
       }
+      ctx.session.player.report = false;
+      ctx.session.player.report_message = {};
+    }
+  }
+  async leaveGame(ctx) {
+    if (
+      ctx.session.player.leave_game &&
+      ctx.message.text === "بله می خواهم خارج شوم"
+    ) {
+      let current_match = await findMatch(ctx.from.id);
+      let users = current_match.players.filter(
+        (item) => item.user_id !== ctx.from.id
+      );
+      if (!current_match) {
+        ctx.reply("شما هنوز در بازی نیستی.");
+        return;
+      }
+      let result = await exitMatch(ctx.from.id);
+      if (result?.delete) {
+        ctx.reply("شما از بازی خارج شدید و بازی به اتمام رسید", {
+          reply_markup: {
+            keyboard: mainKeyboard.keyboard,
+            resize_keyboard: true,
+          },
+        });
+        bot.api.sendMessage(
+          users[0].user_id,
+          `
+بازیکن مقابل از بازی خارج شد و بازی به اتمام رسید
+  `,
+          {
+            reply_markup: {
+              keyboard: mainKeyboard.keyboard,
+              resize_keyboard: true,
+            },
+          }
+        );
+      } else if (result?.leave) {
+        ctx.reply("شما از بازی خارج شدید", {
+          reply_markup: {
+            keyboard: mainKeyboard.keyboard,
+            resize_keyboard: true,
+          },
+        });
+        users.map((user) => {
+          bot.api.sendMessage(
+            user.user_id,
+            `
+یکی از بازیکنان از بازی خارج شد
+          `
+          );
+        });
+      }
+      ctx.session.player.leave_game = false;
     }
   }
 }
