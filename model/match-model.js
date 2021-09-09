@@ -167,6 +167,33 @@ class MatchModel {
       console.log(e);
     }
   }
+  async showMesssagePlayer(user_id, target_id) {
+    try {
+      let current_match = await new MatchModel().findMatch(user_id);
+      let index = current_match.players.findIndex(
+        (item) => item.user_id === user_id
+      );
+      let current_user = current_match.players[index];
+      if (!current_user?.hiddenMessages) {
+        current_user.hiddenMessages = [];
+      }
+      if (current_user?.hiddenMessages?.includes(target_id)) {
+        current_user.hiddenMessages = current_user?.hiddenMessages.filter(
+          (item) => item !== target_id
+        );
+        current_match.players[index] = current_user;
+        await match.findByIdAndUpdate(
+          { _id: current_match._id },
+          { players: current_match.players },
+          { new: true }
+        );
+        return { showing: true };
+      }
+      return { alreadyShow: true };
+    } catch (e) {
+      console.log(e);
+    }
+  }
 }
 
 module.exports = new MatchModel();

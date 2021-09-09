@@ -1,6 +1,10 @@
 const { InlineKeyboard } = require("grammy");
 const bot = require("../config/require");
-const { findMatch, hiddenMesssagePlayer } = require("../model/match-model");
+const {
+  findMatch,
+  hiddenMesssagePlayer,
+  showMesssagePlayer,
+} = require("../model/match-model");
 const { send, reply } = require("./msg");
 
 class General {
@@ -19,7 +23,6 @@ class General {
       })
       .filter((item) => item);
     user_id_players.map((item) => {
-      console.log(item?.hiddenMessages, ctx.from.id);
       if (!item?.hiddenMessages?.includes(ctx.from.id)) {
         bot.api.sendMessage(
           item.user_id,
@@ -30,10 +33,11 @@ class General {
     `,
           {
             reply_markup: {
-              inline_keyboard: new InlineKeyboard().text(
-                "پیامهاش رو نمایش نده",
-                `hiddenMessages ${ctx.from.id}`
-              ).inline_keyboard,
+              inline_keyboard: new InlineKeyboard()
+                .text("پیامهاش رو نمایش نده", `hiddenMessages ${ctx.from.id}`)
+                .row()
+                .text("پیامهاش رو نمایش بده", `showMessages ${ctx.from.id}`)
+                .inline_keyboard,
               resize_keyboard: true,
             },
           }
@@ -51,14 +55,26 @@ class General {
       ctx.reply("شما هنوز بازی شروع نکردید");
       return;
     }
-    let result = await hiddenMesssagePlayer(
-      ctx.from.id,
-      +data.match(/[0-9]/g).join("")
-    );
-    if (result?.alreadyHided) {
-      reply(ctx, "قبلا مخفی کردن پیام های این بازیکن را اعمال کردید");
-    } else if (result?.hided) {
-      reply(ctx, "پیام های این بازیکن دیگر برای شما نمایش دلده نمی شوند");
+    if (data.includes("hiddenMessages")) {
+      let result = await hiddenMesssagePlayer(
+        ctx.from.id,
+        +data.match(/[0-9]/g).join("")
+      );
+      if (result?.alreadyHided) {
+        reply(ctx, "قبلا مخفی کردن پیام های این بازیکن را اعمال کردید");
+      } else if (result?.hided) {
+        reply(ctx, "پیام های این بازیکن دیگر برای شما نمایش دلده نمی شوند");
+      }
+    } else if (data.includes("showMessages")) {
+      let result = await showMesssagePlayer(
+        ctx.from.id,
+        +data.match(/[0-9]/g).join("")
+      );
+      if (result?.alreadyShow) {
+        reply(ctx, "قبلا نمایش پیام های این بازیکن را اعمال کردی");
+      } else if (result?.showing) {
+        reply(ctx, "پیام های این بازیکن برای شما نمایش داده می شوند");
+      }
     }
   }
 }
