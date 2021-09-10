@@ -7,6 +7,7 @@ const schema = new Schema({
   date: { type: String },
   sex: { type: String },
   target_finded: { type: Number, default: 0 },
+  matched: { type: String, default: "" },
 });
 
 const queue = mongoose.model("queues", schema);

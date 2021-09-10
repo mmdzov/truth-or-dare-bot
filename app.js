@@ -4,6 +4,7 @@ const bot = require("./config/require");
 const DuoPlay = require("./functions/duoPlay");
 const General = require("./functions/General");
 const { reply, send } = require("./functions/msg");
+const Multiplayer = require("./functions/Multiplayer");
 const mainKeyboard = require("./keyboard/main-keyboard");
 const { matchPlayingKeyboard } = require("./keyboard/match-keyboard");
 const playerCountKeyboard = require("./keyboard/playerCount-keyboard");
@@ -33,6 +34,7 @@ bot.use(
         select: undefined,
         waitForAddFriend: false,
         selectGender: false,
+        waitForFindPlayer: false,
         selectTargetGender: false,
         findPlayer: false,
         player: {
@@ -415,6 +417,23 @@ bot.hears("بازی دوستانه", (ctx, next) => {
   return next();
 });
 
+bot.hears("آقا", async (ctx, next) => {
+  if (ctx.session.selectTargetGender) {
+    new DuoPlay(ctx).handleStartQueue(ctx, 2, "آقا");
+    return;
+  }
+  if (!ctx.session.selectGender) return;
+  selectGenderUser(ctx.from.id, "آقا");
+  ctx.reply(`جنسیت انتخاب شده : آقا`, {
+    reply_markup: {
+      keyboard: settingKeyboard.keyboard,
+      resize_keyboard: true,
+    },
+  });
+  ctx.session.selectGender = false;
+  return next();
+});
+
 bot.hears(/[نفره]/g, (ctx, next) => {
   //   if (!ctx.session.select) return;
   try {
@@ -427,6 +446,9 @@ bot.hears(/[نفره]/g, (ctx, next) => {
           resize_keyboard: true,
         },
       });
+    } else if (count === 5 || count === 10) {
+      ctx.session.waitForFindPlayer = true;
+      new Multiplayer().handleStartQueue(ctx, count);
     }
   } catch (e) {}
   return next();
