@@ -208,8 +208,6 @@ class QueueModel {
         }; //? start match and queue capacity completed
       }
     }
-    // let getCurrentPlayer = await queue.findOne({ user_id });
-    // console.log(getCurrentPlayer);
   }
 }
 
