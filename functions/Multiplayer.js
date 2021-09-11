@@ -52,11 +52,11 @@ class Multiplayer {
           clearInterval(queueInterval);
           return;
         }
-        let getCurrentPlayer = await queue.findOne({ user_id: ctx.from.id });
-        if (!getCurrentPlayer) {
-          ChangeFindPlayer();
-          clearInterval(queueInterval);
-        }
+        // let getCurrentPlayer = await queue.findOne({ user_id: ctx.from.id });
+        // if (!getCurrentPlayer) {
+        //   ChangeFindPlayer();
+        //   clearInterval(queueInterval);
+        // }
       }
     } else reply(ctx, "خطایی رخ داده لطفا کمی بعد دوباره امتحان کنید");
   }
