@@ -417,23 +417,6 @@ bot.hears("بازی دوستانه", (ctx, next) => {
   return next();
 });
 
-bot.hears("آقا", async (ctx, next) => {
-  if (ctx.session.selectTargetGender) {
-    new DuoPlay(ctx).handleStartQueue(ctx, 2, "آقا");
-    return;
-  }
-  if (!ctx.session.selectGender) return;
-  selectGenderUser(ctx.from.id, "آقا");
-  ctx.reply(`جنسیت انتخاب شده : آقا`, {
-    reply_markup: {
-      keyboard: settingKeyboard.keyboard,
-      resize_keyboard: true,
-    },
-  });
-  ctx.session.selectGender = false;
-  return next();
-});
-
 bot.hears(/[نفره]/g, (ctx, next) => {
   //   if (!ctx.session.select) return;
   try {
@@ -447,7 +430,7 @@ bot.hears(/[نفره]/g, (ctx, next) => {
         },
       });
     } else if (count === 5 || count === 10) {
-      ctx.session.waitForFindPlayer = true;
+      ctx.reply("چند ثانیه صبر کن دارم برات تیم جمع می کنم دوست من");
       new Multiplayer().handleStartQueue(ctx, count);
     }
   } catch (e) {}

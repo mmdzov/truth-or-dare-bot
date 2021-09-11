@@ -1,13 +1,21 @@
 const { Keyboard } = require("grammy");
 const { customAlphabet } = require("nanoid");
-const { startQueue, findAndNewMatch } = require("../model/queue-model");
+const multiplayerMatchKeyboard = require("../keyboard/multiplayer-match-keyboard");
+const {
+  startQueue,
+  findAndNewMatch,
+  findMultipleMatch,
+} = require("../model/queue-model");
+const queue = require("../schema/queue-schema");
+const { reply, send } = require("./msg");
 
 class Multiplayer {
   constructor() {}
   async handleStartQueue(ctx, multiplayer) {
+    const mtp = 2;
     ctx.session.waitForFindPlayer = true;
     const data = {
-      multiplayer,
+      multiplayer: mtp, //! this is test but parameter is multiplayer
       user_id: ctx.from.id,
       date: Date.now(),
       matched: undefined,
@@ -26,35 +34,29 @@ class Multiplayer {
       function ChangeFindPlayer() {
         ctx.session.waitForFindPlayer = false;
       }
-      let queue = setInterval(() => newMatchUser(ctx), 8000);
+      let queueInterval = setInterval(() => newMatchUser(ctx), 8000);
       async function newMatchUser() {
         if (ctx.session.waitForFindPlayer === false) {
-          return clearInterval(queue);
+          return clearInterval(queueInterval);
         }
-        // let result = await findMultipleMatch(ctx.from.id, multiplayer);
-        let result = await findMultipleMatch(ctx.from.id);
+        let result = await findMultipleMatch(ctx.from.id, mtp);
         if (result?.startMatch) {
-          ctx.reply(`تیم تکمیل شد و بازی شروع می شود.`);
+          result?.player_id_list?.map((id) => {
+            send(
+              id,
+              `تیم تکمیل شد و بازی شروع می شود.`,
+              multiplayerMatchKeyboard.keyboard
+            );
+          });
+          ChangeFindPlayer();
+          clearInterval(queueInterval);
+          return;
         }
-        // if (
-        //   res?.new_match_data?.players.filter(
-        //     (item) => item.user_id === ctx.from.id
-        //   ).length > 0
-        // ) {
-        //   reply(
-        //     ctx,
-        //     "بازیکن یافت شد اول اون بازیو شروع میکنه دوست من",
-        //     matchPlayingKeyboard.keyboard
-        //   );
-        //   send(
-        //     res.target_user_id,
-        //     `بازیکن یافت شد دوست من اول تو بازی رو شروع کن`,
-        //     matchPlayingKeyboard.keyboard
-        //   );
-        //   ctx.session.waitForFindPlayer = false;
-        //   ChangeFindPlayer();
-        //   clearInterval(queue);
-        // }
+        let getCurrentPlayer = await queue.findOne({ user_id: ctx.from.id });
+        if (!getCurrentPlayer) {
+          ChangeFindPlayer();
+          clearInterval(queueInterval);
+        }
       }
     } else reply(ctx, "خطایی رخ داده لطفا کمی بعد دوباره امتحان کنید");
   }

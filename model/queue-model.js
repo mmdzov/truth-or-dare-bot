@@ -65,23 +65,56 @@ class QueueModel {
       console.log(e);
     }
   }
-  async findMultipleMatch(user_id, allowPlayers = 2) {
-    let multiples = await queue.findOne({ multiplayer: allowPlayers });
-    if (!multiples || multiples?.length === 0) return;
-    let current_player = multiples.filter((item) => item.user_id === user_id);
+
+  async handleNewMultipleMatch(players, multiplayer) {
+    let playerParams = players.map((item, index) => {
+      return {
+        user_id: item.user_id,
+        capacity: 10,
+        turn: index === 0,
+        done: 0,
+        hiddenMessages: [],
+        answer: "",
+        player_number: index + 1,
+      };
+    });
+    return await newMatch({
+      players: playerParams,
+      player_count: multiplayer,
+      match_id: customAlphabet("123456789asdfghjklzxcvbnmqwertyuiop", 10)(),
+      turn: 1,
+    });
+  }
+  async findMultipleMatch(user_id, allowPlayers = 2, userData = {}) {
+    let multiples = await queue.find({ multiplayer: allowPlayers });
+    // if (!multiples || multiples?.length === 0) return;
+    const queueModel = new QueueModel();
+    let current_player = multiples.filter(
+      (item) => item.user_id === user_id
+    )[0];
+    // console.log(user_id, current_player, userData);
     if (current_player?.matched?.length > 0) {
       let hasAllowPlayerCount = multiples.filter(
         (item) => item.matched === current_player.matched
       );
       if (hasAllowPlayerCount.length >= allowPlayers) {
-        await queue.deleteMany({ matched: checkExtraCapacity.match_id });
-        return { startMatch: true }; //? start match and queue capacity completed
+        await queueModel.handleNewMultipleMatch(
+          hasAllowPlayerCount,
+          allowPlayers
+        );
+        await queue.deleteMany({ matched: current_player?.matched });
+        return {
+          startMatch: true,
+          player_id_list: hasAllowPlayerCount.map((item) => {
+            return item.user_id;
+          }),
+        }; //? start match and queue capacity completed
       }
       let otherQueues = multiples.filter(
-        (item) => item.user_id !== user_id && matched === ""
+        (item) => item.user_id !== user_id && item.matched === ""
       );
       const rand = Math.floor(Math.random() * otherQueues.length - 1);
-      const target = otherQueues[rand];
+      const target = otherQueues[rand === -1 ? 0 : rand];
       target.matched = current_player.matched;
       await queue.findOneAndUpdate(
         { user_id: target.user_id },
@@ -123,9 +156,10 @@ class QueueModel {
         { matched: current_player.queue_unique_id }
       );
       await queue.findOneAndUpdate(
-        { user_id: getQueues[rand]?.user_id },
+        { user_id: getQueues[rand === -1 ? 0 : rand]?.user_id },
         { matched: current_player.queue_unique_id }
       );
+      console.log(getQueues[rand === -1 ? 0 : rand]?.user_id, getQueues, rand);
       return { joinedNewPlayer: true }; //? joined new player to your queue
     }
 
@@ -161,10 +195,21 @@ class QueueModel {
         { matched: checkExtraCapacity.match_id }
       );
       if (checkExtraCapacity.force_start) {
+        await queueModel.handleNewMultipleMatch(
+          hasAllowPlayerCount,
+          allowPlayers
+        );
         await queue.deleteMany({ matched: checkExtraCapacity.match_id });
-        return { startMatch: true }; //? start match and queue capacity completed
+        return {
+          startMatch: true,
+          player_id_list: hasAllowPlayerCount.map((item) => {
+            return item.user_id;
+          }),
+        }; //? start match and queue capacity completed
       }
     }
+    // let getCurrentPlayer = await queue.findOne({ user_id });
+    // console.log(getCurrentPlayer);
   }
 }
 

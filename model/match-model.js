@@ -97,6 +97,7 @@ class MatchModel {
   }
   async detectPlayerTurn(user_id, current_player) {
     let current_match = await new MatchModel().findMatch(user_id);
+    if (!current_match) return;
     let hasTurn = current_match.players[current_match.turn - 1];
     let currentIndex = current_match.players.findIndex(
       (item) => item.user_id === current_player

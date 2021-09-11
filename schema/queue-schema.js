@@ -8,6 +8,7 @@ const schema = new Schema({
   sex: { type: String },
   target_finded: { type: Number, default: 0 },
   matched: { type: String, default: "" },
+  queue_unique_id: { type: String, default: "" },
 });
 
 const queue = mongoose.model("queues", schema);

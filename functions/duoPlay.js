@@ -128,6 +128,7 @@ class DuoPlay {
   async truthOrDareMessage(ctx) {
     if (ctx.session.player.chat) return;
     let match = await findMatch(ctx.from.id);
+    if (!match) return;
     let detect = await detectPlayerTurn(ctx.from.id, ctx.from.id);
     if (Object.keys(match)?.length > 0) {
       if (detect?.hasTurn && detect?.playerTurn && !ctx.session.player.sended) {
