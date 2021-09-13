@@ -98,16 +98,17 @@ class QueueModel {
         (item) => item.matched === current_player.matched
       );
       if (hasAllowPlayerCount.length >= allowPlayers) {
-        await queueModel.handleNewMultipleMatch(
+        let result = await queueModel.handleNewMultipleMatch(
           hasAllowPlayerCount,
           allowPlayers
         );
         await queue.deleteMany({ matched: current_player?.matched });
         return {
           startMatch: true,
-          player_id_list: hasAllowPlayerCount.map((item) => {
+          player_id_list: result.players.map((item) => {
             return item.user_id;
           }),
+          result,
         }; //? start match and queue capacity completed
       }
       let otherQueues = multiples.filter(
@@ -195,16 +196,17 @@ class QueueModel {
         { matched: checkExtraCapacity.match_id }
       );
       if (checkExtraCapacity.force_start) {
-        await queueModel.handleNewMultipleMatch(
+        let result = await queueModel.handleNewMultipleMatch(
           hasAllowPlayerCount,
           allowPlayers
         );
         await queue.deleteMany({ matched: checkExtraCapacity.match_id });
         return {
           startMatch: true,
-          player_id_list: hasAllowPlayerCount.map((item) => {
+          player_id_list: result.players.map((item) => {
             return item.user_id;
           }),
+          result,
         }; //? start match and queue capacity completed
       }
     }

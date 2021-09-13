@@ -7,6 +7,9 @@ const { reply, send } = require("./functions/msg");
 const Multiplayer = require("./functions/Multiplayer");
 const mainKeyboard = require("./keyboard/main-keyboard");
 const { matchPlayingKeyboard } = require("./keyboard/match-keyboard");
+const {
+  multiplayerMatchKeyboard,
+} = require("./keyboard/multiplayer-match-keyboard");
 const playerCountKeyboard = require("./keyboard/playerCount-keyboard");
 const selectGender = require("./keyboard/select-gender");
 const settingKeyboard = require("./keyboard/setting_keyboard");
@@ -17,6 +20,8 @@ const {
   setAnswer,
   clearAnswers,
   selectPlayerTurn,
+  selectSpecificPlayerTurn,
+  selectTruthOrDare,
 } = require("./model/match-model");
 const { startQueue, findAndNewMatch } = require("./model/queue-model");
 const {
@@ -26,7 +31,7 @@ const {
   selectGenderUser,
 } = require("./model/user-model");
 const general = new General();
-
+const mtp = new Multiplayer();
 bot.use(
   session({
     initial() {
@@ -163,6 +168,70 @@ bot.hears("انتخاب جنسیت", async (ctx, next) => {
     },
   });
   return next();
+});
+
+bot.hears("بپرس شجاعت یا حقیقت؟", async (ctx, next) => {
+  let match = await findMatch(ctx.from.id);
+  if (match) {
+    let result = await mtp.checkHasSendedQuestion(ctx, match);
+    if (result === false) return;
+    let turn = match.players[match.turn - 1];
+    if (turn.user_id === ctx.from.id) {
+      ctx.reply("ارسال شد منتظر جواب باش دوست من", {
+        reply_markup: {
+          keyboard: multiplayerMatchKeyboard.keyboard,
+          resize_keyboard: true,
+        },
+      });
+      ctx.session.player.sended = true;
+      bot.api.sendMessage(match.question.to.id, "شجاعت یا حقیقت؟", {
+        reply_markup: {
+          keyboard: new Keyboard().text("شجاعت👿").row().text("حقیقت👻")
+            .keyboard,
+          resize_keyboard: true,
+        },
+      });
+      // await selectSpecificPlayerTurn(ctx.from.id);
+    } else {
+      ctx.reply("دوست من, هنوز نوبتت نشده");
+    }
+  }
+  return next();
+});
+
+bot.hears("شجاعت👿", async (ctx) => {
+  let match = await findMatch(ctx.from.id);
+  if (!match) return;
+  const user_turn = match?.question;
+  if (user_turn?.to?.id !== ctx.from.id)
+    return ctx.reply("هنوز نوبتت نشده دوست من");
+  ctx.session.player.truthOrDare.truth = false;
+  ctx.session.player.truthOrDare.dare = true;
+  ctx.reply(
+    `تو خیلی شجاعی دوست من منتظر باش که ${match.question.from.first_name} بهت بگه چیکار کنی`,
+    {
+      reply_markup: {
+        keyboard: multiplayerMatchKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+  await selectTruthOrDare(ctx.from.id, null, true);
+  const otherPlayers = match.players.filter(
+    (item) =>
+      item.user_id !== user_turn?.from?.id && item.user_id !== user_turn?.to?.id
+  );
+  send(
+    user_turn.from.id,
+    `${user_turn.to.first_name}
+شجاعت رو انتخاب کرد حالا چه کاری باید انجام بده؟`
+  );
+  otherPlayers.map((item) => {
+    send(
+      item.user_id,
+      `خیلی خب دوست شجاعتون ${user_turn.to.first_name} شجاعت رو انتخاب کرد حالا باید ببینیم که ${user_turn.from.first_name} بهش بگه چه کاری انجام بده.`
+    );
+  });
 });
 
 bot.hears("بپرس شجاعت یا حقیقت", async (ctx, next) => {
@@ -445,6 +514,7 @@ bot.on("message", async (ctx, next) => {
   new DuoPlay().truthOrDareMessage(ctx);
   general.chat(ctx);
   general.duoReporPlayer(ctx);
+  mtp.playerSelectedTruthOrDare(ctx);
   return next();
 });
 bot.start();

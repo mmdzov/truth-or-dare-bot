@@ -1,3 +1,4 @@
+const bot = require("../config/require");
 const {
   findOneAndUpdate,
   findOneAndDelete,
@@ -129,6 +130,148 @@ class MatchModel {
       console.log(e);
     }
   }
+  async selectSpecificPlayerTurn(user_id) {
+    try {
+      let current_match = await new MatchModel().findMatch(user_id);
+      let question = current_match?.question;
+      current_match.players = current_match.players.map((item) => {
+        if (question.to.id === user_id || question.from.id === user_id) {
+          item.turn = !item.turn;
+        } else item.turn = false;
+        return item;
+      });
+      let res = await match.findOneAndUpdate(
+        { match_id: current_match.match_id },
+        { players: current_match.players },
+        { new: true }
+      );
+      return res;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async selectTruthOrDare(user_id, truth = null, dare = null) {
+    try {
+      let current_match = await new MatchModel().findMatch(user_id);
+      current_match.question.to.truth = truth ? truth : false;
+      current_match.question.to.dare = dare ? dare : false;
+      current_match.question.from.truth = false;
+      current_match.question.from.dare = false;
+      let res = await match.findOneAndUpdate(
+        { match_id: current_match.match_id },
+        { question: current_match.question },
+        { new: true }
+      );
+      return res;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async disabledResendMessage(user_id) {
+    try {
+      let current_match = await new MatchModel().findMatch(user_id);
+      current_match.question.from.truth = null;
+      current_match.question.from.dare = null;
+      let res = await match.findOneAndUpdate(
+        { match_id: current_match.match_id },
+        { question: current_match.question },
+        { new: true }
+      );
+      return res;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async changeTurnNextPlayer(user_id) {
+    try {
+      const current_match = await new MatchModel().findMatch(user_id);
+      let rand = Math.floor(Math.random() * current_match.players.length - 2);
+      let player = current_match.players;
+      const index = player.findIndex((item) => item.turn);
+      if (
+        player[index].capacity === 0 &&
+        player.filter(
+          (item) =>
+            item.user_id !== current_match.question.from.id && item.capacity > 0
+        )
+      ) {
+        bot.api.sendMessage(
+          current_match.question.from.id,
+          `
+تعداد سوال های پرسیده شده ی شما به 10 تا رسید الان تنها فقط بازیکنان باقی مانده می توانند از شما سوال کنند.
+        `
+        );
+      }
+      player[index].turn = false;
+      player[index].capacity -= 1;
+      if (player[index + 1]) {
+        player[index + 1].turn = true;
+      } else player[0].turn = true;
+      //* check beshe! age user montakhab capacity === 0 dasht byd nobat be nafar baadi bere
+
+      let selectTarget =
+        player.length === 2
+          ? player[current_match.turn === 1 ? 0 : 1]
+          : player.filter(
+              (item) =>
+                // item.user_id !== current_match.question.from.id &&
+                item.user_id !== current_match.question.to.id
+            )[rand === -1 ? 0 : rand];
+      let user_chat = await bot.api.getChat(
+        player.filter((item) => item.turn)[0]?.user_id
+      );
+      let target_user_chat = await bot.api.getChat(selectTarget?.user_id);
+      current_match.question = {
+        from: user_chat,
+        to: target_user_chat,
+      };
+      console.log(
+        current_match.turn,
+        player.length >= current_match.turn ? current_match.turn + 1 : 1,
+        player.length,
+        current_match.turn
+      );
+      let res = await match.findOneAndUpdate(
+        { _id: current_match._id },
+        {
+          players: player,
+          question: current_match.question,
+          turn: player.findIndex((item) => item.turn) + 1,
+          // turn:
+          //   player.length >= current_match.turn ? current_match.turn + 1 : 1,
+        },
+        { new: true }
+      );
+      return res;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async playerRelocation(user_id) {
+    try {
+      let current_match = await new MatchModel().findMatch(user_id);
+      let question = current_match.question;
+      question.from = current_match.question.to;
+      question.to = current_match.question.from;
+      question.to.truth = false;
+      question.to.dare = false;
+      question.from.truth = false;
+      question.from.dare = false;
+      let res = await match.findOneAndUpdate(
+        { match_id: current_match.match_id },
+        { question: question },
+        { new: true }
+      );
+      return res;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async changeCapacity(user_id) {
     try {
       let current_match = await new MatchModel().findMatch(user_id);
@@ -221,6 +364,13 @@ class MatchModel {
     } catch (e) {
       console.log(e);
     }
+  }
+  async setMultipleMatchTurn(user_id, from, to) {
+    let current_match = await new MatchModel().findMatch(user_id);
+    await match.findOneAndUpdate(
+      { _id: current_match?._id },
+      { question: { from, to } }
+    );
   }
 }
 
