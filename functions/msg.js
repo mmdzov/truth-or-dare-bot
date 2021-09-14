@@ -48,6 +48,7 @@ async function advanceSend(ctx, to = "", keyboard = {}, callback = () => {}) {
             reply_markup: keyboard,
           }
         );
+        callback();
         break;
       }
     }

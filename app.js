@@ -234,6 +234,41 @@ bot.hears("شجاعت👿", async (ctx) => {
   });
 });
 
+bot.hears("حقیقت👻", async (ctx) => {
+  let match = await findMatch(ctx.from.id);
+  if (!match) return;
+  const user_turn = match?.question;
+  if (user_turn?.to?.id !== ctx.from.id)
+    return ctx.reply("هنوز نوبتت نشده دوست من");
+  ctx.session.player.truthOrDare.truth = false;
+  ctx.session.player.truthOrDare.dare = true;
+  ctx.reply(
+    `دوست من منتظر باش که ${match.question.from.first_name} بهت بگه چیکار کنی`,
+    {
+      reply_markup: {
+        keyboard: multiplayerMatchKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+  await selectTruthOrDare(ctx.from.id, null, true);
+  const otherPlayers = match.players.filter(
+    (item) =>
+      item.user_id !== user_turn?.from?.id && item.user_id !== user_turn?.to?.id
+  );
+  send(
+    user_turn.from.id,
+    `${user_turn.to.first_name}
+حقیقت رو انتخاب کرد حالا چه کاری باید انجام بده؟`
+  );
+  otherPlayers.map((item) => {
+    send(
+      item.user_id,
+      `خیلی خب دوستتون ${user_turn.to.first_name} حقیقت رو انتخاب کرد حالا منتظر ${user_turn.from.first_name} میمونیم تا ببینیم صحبتش چی هست`
+    );
+  });
+});
+
 bot.hears("بپرس شجاعت یا حقیقت", async (ctx, next) => {
   let match = await findMatch(ctx.from.id);
   if (match) {

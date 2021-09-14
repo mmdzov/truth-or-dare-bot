@@ -151,7 +151,9 @@ ${ctx.message.text}`);
     ) {
       match.players.map((item) => {
         if (item.user_id !== qst.to.id) {
-          advanceSend(ctx, item.user_id, aboutMessageInlineKeyboard);
+          advanceSend(ctx, item.user_id, aboutMessageInlineKeyboard, () => {
+            send(qst.to.id, `پیامت برای ${qst.from.first_name} ارسال شد دوست من`);
+          });
         }
       });
       let result = await changeTurnNextPlayer(ctx.from.id);
