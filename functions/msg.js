@@ -38,14 +38,14 @@ async function advanceSend(ctx, to = "", keyboard = {}, callback = () => {}) {
       let n = Method[i].split("send").join("").toLowerCase();
       if (n === "message") n = "text";
       if (ctx.message?.[n]) {
-        bot.api?.[Method[i]](
+        bot.api?.[Method[i] === "photo" ? "replyWithPhoto" : Method[i]](
           to,
           ctx.message?.[n]?.file_id ??
-            ctx.message?.[n] ??
-            ctx.message?.[n][0]?.file_id,
+            ctx.message?.[n][0]?.file_id ??
+            ctx.message?.[n],
           {
             caption: ctx.message?.caption ?? ctx.message?.text,
-            keyboard,
+            reply_markup: keyboard,
           }
         );
         break;
