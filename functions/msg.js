@@ -21,4 +21,37 @@ async function send(user_id, message = "", keyboard, ...options) {
   } catch (e) {}
 }
 
-module.exports = { reply, send };
+async function advanceSend(ctx, to = "", keyboard = {}, callback = () => {}) {
+  try {
+    const Method = [
+      "sendVoice",
+      "sendAudio",
+      "sendDocument",
+      "sendAnimation",
+      "sendVideo",
+      "sendSticker",
+      "sendPhoto",
+      "sendMessage",
+    ];
+
+    for (let i in Method) {
+      let n = Method[i].split("send").join("").toLowerCase();
+      if (n === "message") n = "text";
+      if (ctx.message?.[n]) {
+        bot.api?.[Method[i]](
+          to,
+          ctx.message?.[n]?.file_id ??
+            ctx.message?.[n] ??
+            ctx.message?.[n][0]?.file_id,
+          {
+            caption: ctx.message?.caption ?? ctx.message?.text,
+            keyboard,
+          }
+        );
+        break;
+      }
+    }
+  } catch (e) {}
+}
+
+module.exports = { reply, send, advanceSend };

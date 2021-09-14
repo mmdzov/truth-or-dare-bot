@@ -18,7 +18,7 @@ const {
   findMultipleMatch,
 } = require("../model/queue-model");
 const queue = require("../schema/queue-schema");
-const { reply, send } = require("./msg");
+const { reply, send, advanceSend } = require("./msg");
 
 class Multiplayer {
   constructor() {}
@@ -114,7 +114,7 @@ class Multiplayer {
       (qst?.to?.truth || qst?.to?.dare)
     ) {
       await disabledResendMessage(ctx.from.id);
-      send(qst?.to?.id, ctx.message?.text).catch((e) => {});
+      await advanceSend(ctx, qst?.to?.id, aboutMessageInlineKeyboard);
       reply(ctx, `پیامت برای ${qst.to.first_name} ارسال شد دوست من.`);
       match.players.map((item) => {
         if (item.user_id !== qst.from.id || item.user_id !== qst.to.id) {
@@ -149,37 +149,9 @@ ${ctx.message.text}`);
       qst?.from?.truth === null &&
       qst?.from?.dare === null
     ) {
-      const Method = [
-        "sendVoice",
-        "sendAudio",
-        "sendDocument",
-        "sendAnimation",
-        "sendVideo",
-        "sendSticker",
-        "sendPhoto",
-        "sendMessage",
-      ];
       match.players.map((item) => {
         if (item.user_id !== qst.to.id) {
-          for (let i in Method) {
-            let n = Method[i].split("send").join("").toLowerCase();
-            if (n === "message") n = "text";
-            if (ctx.message?.[n]) {
-              bot.api?.[Method[i]](
-                item.user_id,
-                ctx.message?.[n]?.file_id ??
-                  ctx.message?.[n] ??
-                  ctx.message?.[n][0]?.file_id,
-                {
-                  caption: ctx.message?.caption ?? ctx.message?.text,
-                  reply_markup: {
-                    inline_keyboard: aboutMessageInlineKeyboard.inline_keyboard,
-                  },
-                }
-              );
-              break;
-            }
-          }
+          advanceSend(ctx, item.user_id, aboutMessageInlineKeyboard);
         }
       });
       let result = await changeTurnNextPlayer(ctx.from.id);
