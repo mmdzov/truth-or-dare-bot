@@ -4,6 +4,7 @@ const {
   findOneAndDelete,
 } = require("../schema/match-schema");
 const match = require("../schema/match-schema");
+const user = require("../schema/user-schema");
 
 class MatchModel {
   async newMatch(data) {
@@ -289,6 +290,79 @@ class MatchModel {
       console.log(e);
     }
   }
+
+  async checkUserReport(user_id, target_id, message = "", mode = "") {
+    try {
+      const current_match = await new MatchModel().findMatch(user_id);
+      let targetIndex = current_match.players.findIndex(
+        (item) => item.user_id === target_id
+      );
+      if (targetIndex === -1) return { not_found: true };
+      if (
+        current_match.players[targetIndex].reports.user_id.filter(
+          (item) => item === user_id
+        ).length > 0
+      )
+        return { prevReported: true };
+      if (mode === "finally") {
+        const target = current_match.players[targetIndex];
+        if (target?.reports?.length >= current_match.player.length - 1) {
+          let userData = await user.findOne({ user_id: target_id });
+          let report = {
+            user_id: current_match.players[targetIndex].reports.map(
+              (item) => item.user_id
+            ),
+            message: current_match.players[targetIndex].reports.map(
+              (item) => item.message
+            ),
+          };
+          userData.reports.push(report);
+          let players = current_match.players.filter(
+            (item) => item.user_id !== target_id
+          );
+          await match.findOneAndUpdate(
+            { match_id: current_match.match_id },
+            { players: players }
+          );
+          await user.findOneAndUpdate(
+            { user_id: userData.user_id },
+            { reports: userData.reports }
+          );
+          return {
+            remove_user: true,
+            users: current_match.players
+              .filter(
+                (item) =>
+                  item.user_id !== ctx.from.id && item.user_id !== target_id
+              )
+              .map((item) => item.user_id),
+          };
+        }
+        let report = {
+          user_id: user_id,
+          message,
+        };
+        if (!current_match.players[targetIndex]?.reports) {
+          current_match.players[targetIndex].reports = [];
+        }
+        current_match.players[targetIndex]?.reports?.push(report);
+        match.findOneAndUpdate(
+          { match_id: current_match.match_id },
+          { players: current_match.players }
+        );
+        return {
+          report: true,
+          users: current_match.players
+            .filter(
+              (item) =>
+                item.user_id !== ctx.from.id && item.user_id !== target_id
+            )
+            .map((item) => item.user_id),
+        };
+      }
+    } catch (e) {}
+  }
+
   async hiddenMesssagePlayer(user_id, target_id) {
     try {
       let current_match = await new MatchModel().findMatch(user_id);

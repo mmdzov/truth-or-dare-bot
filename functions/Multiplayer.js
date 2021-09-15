@@ -114,7 +114,11 @@ class Multiplayer {
       (qst?.to?.truth || qst?.to?.dare)
     ) {
       await disabledResendMessage(ctx.from.id);
-      await advanceSend(ctx, qst?.to?.id, aboutMessageInlineKeyboard);
+      await advanceSend(
+        ctx,
+        qst?.to?.id,
+        aboutMessageInlineKeyboard(qst.from.id)
+      );
       reply(ctx, `پیامت برای ${qst.to.first_name} ارسال شد دوست من.`);
       match.players.map((item) => {
         if (item.user_id !== qst.from.id || item.user_id !== qst.to.id) {
@@ -151,9 +155,17 @@ ${ctx.message.text}`);
     ) {
       match.players.map((item) => {
         if (item.user_id !== qst.to.id) {
-          advanceSend(ctx, item.user_id, aboutMessageInlineKeyboard, () => {
-            send(qst.to.id, `پیامت برای ${qst.from.first_name} ارسال شد دوست من`);
-          });
+          advanceSend(
+            ctx,
+            item.user_id,
+            aboutMessageInlineKeyboard(qst.to.id),
+            () => {
+              send(
+                qst.to.id,
+                `پیامت برای ${qst.from.first_name} ارسال شد دوست من`
+              );
+            }
+          );
         }
       });
       let result = await changeTurnNextPlayer(ctx.from.id);
@@ -196,6 +208,12 @@ ${ctx.message.text}`);
       );
       return false;
     }
+  }
+  async multipleReport(ctx, next = () => {}) {
+    if (ctx.message.text.length > 60) return;
+    ctx.session.report_message.message = ctx.message.text;
+    ctx.reply("گزارش شما انجام شد برای ثبت گزارش بر روی دکمه ثبت گزارش بزنید.");
+    return next();
   }
 }
 

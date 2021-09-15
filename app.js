@@ -9,8 +9,10 @@ const mainKeyboard = require("./keyboard/main-keyboard");
 const { matchPlayingKeyboard } = require("./keyboard/match-keyboard");
 const {
   multiplayerMatchKeyboard,
+  multiplayerMatchCurrentUserKeyboard,
 } = require("./keyboard/multiplayer-match-keyboard");
 const playerCountKeyboard = require("./keyboard/playerCount-keyboard");
+const { reportKeyboard } = require("./keyboard/report-keyboard");
 const selectGender = require("./keyboard/select-gender");
 const settingKeyboard = require("./keyboard/setting_keyboard");
 const {
@@ -22,6 +24,7 @@ const {
   selectPlayerTurn,
   selectSpecificPlayerTurn,
   selectTruthOrDare,
+  checkUserReport,
 } = require("./model/match-model");
 const { startQueue, findAndNewMatch } = require("./model/queue-model");
 const {
@@ -42,6 +45,7 @@ bot.use(
         waitForFindPlayer: false,
         selectTargetGender: false,
         findPlayer: false,
+        report_message: {},
         player: {
           report: false,
           report_message: {},
@@ -71,7 +75,7 @@ bot.use(
 bot.command("start", (ctx, next) => {
   newuser({
     user_id: ctx.from.id,
-    matchs: [],
+    matchs: 0,
     user_unique_id: customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 8)(),
     sex: "unavailable",
     visible_profile: false,
@@ -269,6 +273,36 @@ bot.hears("حقیقت👻", async (ctx) => {
   });
 });
 
+bot.on("callback_query:data", async (ctx, next) => {
+  if (!ctx.callbackQuery.data.includes("reportPlayer")) return next();
+  const match = await findMatch(ctx.from.id);
+  if (!match) return;
+  let target_id = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
+  let result = await checkUserReport(ctx.from.id, target_id);
+  if (result?.prevReported)
+    return ctx.reply("شما قبلا این بازیکن را گزارش داده اید");
+  if (result?.not_found) return ctx.reply(`کاربر در بازی وجود ندارد`);
+  const target = await bot.api.getChat(target_id);
+  ctx.session.report_message = {
+    ...target,
+    user_id: target.id,
+    hasTurn: match.question.from.id === ctx.from.id,
+  };
+  return ctx.reply(
+    `
+متن گزارش را ارسالل کنید
+گزارش شما به گوش دیگر افراد بازی میرسد
+اگر تعداد گزارش ها به تعداد تیم بجز فرد گزارش شده برسد اون فرد گزارش شده از بازی فعلی حذف خواهد شد.
+توجه: متن گزارش باید کمتر از 60 کارکتر باشد`,
+    {
+      reply_markup: {
+        keyboard: reportKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+});
+
 bot.hears("بپرس شجاعت یا حقیقت", async (ctx, next) => {
   let match = await findMatch(ctx.from.id);
   if (match) {
@@ -378,7 +412,67 @@ bot.hears("گزارش بازیکن", (ctx, next) => {
   return next();
 });
 
-bot.hears("ثبت گزارش", (ctx, next) => {
+bot.hears("ثبت گزارش", async (ctx, next) => {
+  if (Object.keys(ctx.session.report_message).length > 0) {
+    const report_message = ctx.session.report_message;
+    let result = await checkUserReport(
+      ctx.from.id,
+      report_message.user_id,
+      report_message.message,
+      "finally"
+    );
+    if (result?.remove_user) {
+      bot.api.sendMessage(
+        ctx.session.report_message.user_id,
+        `
+گزارش ها علیه شما به بیشترین حد خود رسید و شما از بازی فعلی حذف شدید`,
+        {
+          reply_markup: {
+            keyboard: mainKeyboard.keyboard,
+            resize_keyboard: true,
+          },
+        }
+      );
+      result.users.map((item) => {
+        bot.api.sendMessage(
+          item,
+          `
+بازیکن ${ctx.from.first_name} علیه بازیکن ${report_message.first_name} گزارش ثبت کرد.
+
+علت گزارش: ${report_message.message}
+
+بازیکن از بازی حذف شد`
+        );
+      });
+    } else if (result?.report) {
+      bot.api.sendMessage(
+        ctx.session.report_message.user_id,
+        `
+کاربر ${ctx.from.fist_name} علیه شما گزارش ثبت کرد
+
+علت گزارش: ${report_message.message}`
+      );
+      result.users.map((item) => {
+        bot.api.sendMessage(
+          item,
+          `
+بازیکن ${ctx.from.first_name} علیه بازیکن ${report_message.first_name} گزارش ثبت کرد.
+
+علت گزارش: ${report_message.message}`
+        );
+      });
+    }
+    ctx.reply("گزارش ثبت شد به منوی بازی برگشتید", {
+      reply_markup: {
+        keyboard: ctx.session.report_message.hasTurn
+          ? multiplayerMatchCurrentUserKeyboard.keyboard
+          : multiplayerMatchKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
+    ctx.session.report_message = {};
+    return;
+  }
   general.duoAcceptSendReportPlayer(ctx);
   ctx.reply("گزارش ثبت شد و بازی را به اتمام رساندید به منوی اصلی برگشتید", {
     reply_markup: {
@@ -390,6 +484,16 @@ bot.hears("ثبت گزارش", (ctx, next) => {
 });
 
 bot.hears("لغو گزارش", (ctx, next) => {
+  if (Object.keys(ctx.session.report_message).length > 0) {
+    return ctx.reply("گزارش لغو شد به منوی بازی برگشتید", {
+      reply_markup: {
+        keyboard: ctx.session.report_message.hasTurn
+          ? multiplayerMatchCurrentUserKeyboard.keyboard
+          : multiplayerMatchKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
+  }
   ctx.session.player.report = false;
   ctx.session.player.report_message = {};
   ctx.reply("گزارش لغو شد به منوی بازی برگشتید", {
@@ -547,6 +651,7 @@ bot.on("callback_query:data", (ctx) => {
 
 bot.on("message", async (ctx, next) => {
   new DuoPlay().truthOrDareMessage(ctx);
+  mtp.multipleReport(ctx);
   general.chat(ctx);
   general.duoReporPlayer(ctx);
   mtp.playerSelectedTruthOrDare(ctx);

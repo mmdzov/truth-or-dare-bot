@@ -22,11 +22,13 @@ const multiplayerMatchCurrentUserKeyboard = new Keyboard()
   .text("جزییات بازی")
   .text("ترک بازی");
 
-const aboutMessageInlineKeyboard = new InlineKeyboard()
-  .text("گزارش محتوا", "reportMessageContent")
-  .row()
-  .text("گزارش بازیکن", "reportPlayer")
-  .row();
+const aboutMessageInlineKeyboard = (user_id) => {
+  return new InlineKeyboard()
+    .text("گزارش بازیکن", `reportPlayer ${user_id}`)
+    .row();
+};
+// .text("گزارش محتوا", `reportMessageContent ${user_id}`)
+// .row()
 
 module.exports = {
   multiplayerMatchKeyboard,
