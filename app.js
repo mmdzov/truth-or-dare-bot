@@ -42,6 +42,10 @@ bot.use(
         select: undefined,
         waitForAddFriend: false,
         selectGender: false,
+        chat: {
+          hasTurn: false,
+          chat: true,
+        },
         waitForFindPlayer: false,
         selectTargetGender: false,
         findPlayer: false,
@@ -118,7 +122,21 @@ bot.hears("افزودن دوست", (ctx, next) => {
   return next();
 });
 
-bot.hears("بازگشت", (ctx, next) => {
+bot.hears("بازگشت", async (ctx, next) => {
+  const match = await findMatch(ctx.from.id);
+  if (!match) return next();
+  if (ctx.session?.chat?.chat) {
+    ctx.reply(`دستورت چیه دوست من`, {
+      reply_markup: {
+        keyboard: ctx.session.chat?.hasTurn
+          ? multiplayerMatchCurrentUserKeyboard.keyboard
+          : multiplayerMatchKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
+    ctx.session.chat = {};
+    return next();
+  }
   ctx.reply(`دستورت چیه دوست من`, {
     reply_markup: {
       keyboard: ctx.session.selectGender
@@ -297,6 +315,24 @@ bot.on("callback_query:data", async (ctx, next) => {
     {
       reply_markup: {
         keyboard: reportKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+});
+
+bot.hears("گفتگو با بازیکنان", async (ctx, next) => {
+  const match = await findMatch(ctx.from.id);
+  if (!match) return next();
+  ctx.session.chat.chat = true;
+  if (match.question.from.id === ctx.from.id) {
+    ctx.session.chat.hasTurn = true;
+  }
+  ctx.reply(
+    "هم اکنون می توانید با بازیکنان گفتگو کنید برای لغو انجام می توانید بر روی دکمه بازگشت بزنید",
+    {
+      reply_markup: {
+        keyboard: new Keyboard().text("بازگشت"),
         resize_keyboard: true,
       },
     }
@@ -653,6 +689,7 @@ bot.on("message", async (ctx, next) => {
   new DuoPlay().truthOrDareMessage(ctx);
   mtp.multipleReport(ctx);
   general.chat(ctx);
+  mtp.chatPlayers(ctx);
   general.duoReporPlayer(ctx);
   mtp.playerSelectedTruthOrDare(ctx);
   return next();

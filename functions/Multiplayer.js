@@ -1,4 +1,4 @@
-const { Keyboard } = require("grammy");
+const { Keyboard, InlineKeyboard } = require("grammy");
 const { customAlphabet } = require("nanoid");
 const bot = require("../config/require");
 const {
@@ -210,10 +210,30 @@ ${ctx.message.text}`);
     }
   }
   async multipleReport(ctx, next = () => {}) {
+    if (Object.keys(ctx.session.report_message).length === 0) return;
     if (ctx.message.text.length > 60) return;
     ctx.session.report_message.message = ctx.message.text;
     ctx.reply("گزارش شما انجام شد برای ثبت گزارش بر روی دکمه ثبت گزارش بزنید.");
     return next();
+  }
+  async chatPlayers(ctx) {
+    const current_match = await findMatch(ctx.from.id);
+    if (!current_match) return;
+    if (Object.keys(ctx.session.chat)?.length === 0) return;
+    let players = current_match.players
+      .map((item) => item.user_id)
+      .filter((item) => item !== ctx.from.id);
+    players.map((item) => {
+      bot.api.sendMessage(
+        item,
+        `
+یک پیام از طرف ${ctx.from.first_name} 
+      
+${ctx.message.text}`,
+        aboutMessageInlineKeyboard(ctx.from.id)
+      );
+    });
+    ctx.reply("پیام شما برای تمام بازیکنان ارسال شد.");
   }
 }
 
