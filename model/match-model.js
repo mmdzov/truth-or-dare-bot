@@ -314,16 +314,23 @@ class MatchModel {
           let players = current_match.players.filter(
             (item) => item.user_id !== target_id
           );
-          await match.findOneAndUpdate(
-            { match_id: current_match.match_id },
-            { players: players }
-          );
+
+          if (players.length === 1) {
+            await match.findOneAndDelete({ match_id: current_match.match_id });
+          } else {
+            await match.findOneAndUpdate(
+              { match_id: current_match.match_id },
+              { players: players }
+            );
+          }
           await user.findOneAndUpdate(
             { user_id: userData.user_id },
             { reports: userData.reports }
           );
+
           return {
             remove_user: true,
+            finished_game: players.length === 1,
             users: current_match.players
               .filter(
                 (item) => item.user_id !== user_id && item.user_id !== target_id
