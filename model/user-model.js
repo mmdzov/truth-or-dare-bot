@@ -3,7 +3,6 @@ const user = require("../schema/user-schema");
 class UserModel {
   async newuser(data) {
     let player = await user.findOne({ user_id: data.user_id });
-    console.log(player);
     if (!player) {
       user.create(data, (err, result) => {
         if (err) console.log(err);

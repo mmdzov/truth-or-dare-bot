@@ -125,8 +125,8 @@ bot.hears("افزودن دوست", (ctx, next) => {
 
 bot.hears("بازگشت", async (ctx, next) => {
   const match = await findMatch(ctx.from.id);
-  if (!match) return next();
   if (ctx.session?.chat?.chat) {
+    if (!match) return next();
     ctx.reply(`دستورت چیه دوست من`, {
       reply_markup: {
         keyboard: ctx.session.chat?.hasTurn
@@ -139,6 +139,7 @@ bot.hears("بازگشت", async (ctx, next) => {
     return next();
   }
   if (Object.keys(ctx.session.privateChat)?.length > 0) {
+    if (!match) return next();
     ctx.reply("به منوی بازی برگشتی دوست من", {
       reply_markup: {
         keyboard: ctx.session.privateChat?.hasTurn
@@ -796,25 +797,34 @@ bot.hears("بازی دوستانه", (ctx, next) => {
   return next();
 });
 
-bot.hears(/[نفره]/g, (ctx, next) => {
-  //   if (!ctx.session.select) return;
-  try {
-    let count = +ctx.message.text.match(/[0-9]/g)[0];
-    if (count === 2) {
-      ctx.session.selectTargetGender = true;
-      ctx.reply(`دوست داری طرف مقابلت خانم باشه یا آقا؟`, {
-        reply_markup: {
-          keyboard: selectGender.keyboard,
-          resize_keyboard: true,
-        },
-      });
-    } else if (count === 5 || count === 10) {
-      ctx.reply("چند ثانیه صبر کن دارم برات تیم جمع می کنم دوست من");
-      new Multiplayer().handleStartQueue(ctx, count);
+
+//* select player count
+
+let counts = ["2", "5", "10"];
+
+for (let i in counts) {
+  bot.hears(`${counts[i]} نفره`, (ctx, next) => {
+    try {
+      let count = +ctx.message.text.match(/[0-9]/g)?.[0] ?? 0;
+      if (count === 2) {
+        ctx.session.selectTargetGender = true;
+        ctx.reply(`دوست داری طرف مقابلت خانم باشه یا آقا؟`, {
+          reply_markup: {
+            keyboard: selectGender.keyboard,
+            resize_keyboard: true,
+          },
+        });
+      } else if (count === 5 || count === 10) {
+        ctx.reply("چند ثانیه صبر کن دارم برات تیم جمع می کنم دوست من");
+
+        new Multiplayer().handleStartQueue(ctx, count);
+      }
+    } catch (e) {
+      console.log(e);
     }
-  } catch (e) {}
-  return next();
-});
+    return next();
+  });
+}
 
 bot.on("callback_query:data", (ctx, next) => {
   general.callbackQueryData(ctx);
