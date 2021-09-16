@@ -565,6 +565,7 @@ bot.hears("ثبت گزارش", async (ctx, next) => {
       report_message.message,
       "finally"
     );
+    console.log(result);
     if (result?.remove_user) {
       bot.api.sendMessage(
         ctx.session.report_message.user_id,
@@ -592,7 +593,7 @@ bot.hears("ثبت گزارش", async (ctx, next) => {
       bot.api.sendMessage(
         ctx.session.report_message.user_id,
         `
-کاربر ${ctx.from.fist_name} علیه شما گزارش ثبت کرد
+کاربر ${ctx.from.first_name} علیه شما گزارش ثبت کرد
 
 علت گزارش: ${report_message.message}`
       );
@@ -803,7 +804,7 @@ bot.hears("بازی دوستانه", (ctx, next) => {
   return next();
 });
 
-//* select player count
+//* select player number
 
 let counts = ["2", "5", "10"];
 

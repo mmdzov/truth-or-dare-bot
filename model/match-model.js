@@ -300,21 +300,32 @@ class MatchModel {
         return { prevReported: true };
       if (mode === "finally") {
         const target = current_match.players[targetIndex];
-        if (target?.reports?.length >= current_match.players?.length - 1) {
+        console.log(target?.reports?.length, current_match.players?.length - 1);
+        if (
+          current_match.players.length <= 2 ||
+          target?.reports?.length >= current_match.players?.length - 1
+        ) {
           let userData = await user.findOne({ user_id: target_id });
+
+          let users_ids =
+            target?.reports?.user_id?.map((item) => item.user_id) ?? [];
+          let messages =
+            target?.reports?.message?.map((item) => item.message) ?? [];
+
           let report = {
-            user_id: current_match.players[targetIndex].reports.map(
-              (item) => item.user_id
-            ),
-            message: current_match.players[targetIndex].reports.map(
-              (item) => item.message
-            ),
+            user_id:
+              current_match.players.length <= 2
+                ? [...users_ids, user_id]
+                : users_ids,
+            message:
+              current_match.players.length <= 2
+                ? [...messages, user_id]
+                : messages,
           };
           userData.reports.push(report);
           let players = current_match.players.filter(
             (item) => item.user_id !== target_id
           );
-
           if (players.length === 1) {
             await match.findOneAndDelete({ match_id: current_match.match_id });
           } else {
