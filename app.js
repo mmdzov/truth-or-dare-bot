@@ -307,7 +307,7 @@ bot.hears("حقیقت👻", async (ctx) => {
 bot.on("callback_query:data", async (ctx, next) => {
   if (!ctx.callbackQuery.data.includes("reportPlayer")) return next();
   const match = await findMatch(ctx.from.id);
-  if (!match) return;
+  if (!match) return next();
   let target_id = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
   let result = await checkUserReport(ctx.from.id, target_id);
   if (result?.prevReported)
@@ -319,7 +319,7 @@ bot.on("callback_query:data", async (ctx, next) => {
     user_id: target.id,
     hasTurn: match.question.from.id === ctx.from.id,
   };
-  return ctx.reply(
+  ctx.reply(
     `
 متن گزارش را ارسال کنید
 گزارش شما به گوش دیگر افراد بازی میرسد
@@ -332,6 +332,7 @@ bot.on("callback_query:data", async (ctx, next) => {
       },
     }
   );
+  return next();
 });
 
 bot.hears("گفتگو با بازیکنان", async (ctx, next) => {
@@ -372,9 +373,9 @@ bot.hears("گفتگو با بازیکن خاص", async (ctx) => {
 });
 
 bot.on("callback_query:data", async (ctx, next) => {
+  if (!ctx.callbackQuery.data.includes("openPrivateChat")) return next();
   const match = await findMatch(ctx.from.id);
-  if (!match) return;
-  if (!ctx.callbackQuery.data.includes("openPrivateChat")) return next;
+  if (!match) return next();
   let user_id = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
   ctx.session.privateChat = {
     user_id,
@@ -392,6 +393,7 @@ bot.on("callback_query:data", async (ctx, next) => {
       },
     }
   );
+  return next()
 });
 
 bot.hears("بپرس شجاعت یا حقیقت", async (ctx, next) => {
@@ -643,6 +645,33 @@ bot.hears("گفتگو با بازیکن", (ctx, next) => {
     {
       reply_markup: {
         keyboard: new Keyboard().text("لغو گفتگو").keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+  return next();
+});
+
+//? private chat between - multiplayer-match
+
+bot.on("callback_query:data", async (ctx, next) => {
+  const data = ctx.callbackQuery.data;
+  if (!data.includes("chatBetweenTwo")) return next();
+  const match = await findMatch(ctx.from.id);
+  if (!match) return next();
+  const target_id = +data.match(/[0-9]/g).join("");
+  const target = await bot.api.getChat(target_id);
+  ctx.session.privateChat = {
+    user_id: target_id,
+    hasTurn: match.question.from.id === ctx.from.id,
+  };
+  ctx.reply(
+    `
+هم اکنون می توانید با ${target.first_name} گفتگو کنید 
+برای لغو گفتگو بر روی بازگشت بزنید`,
+    {
+      reply_markup: {
+        keyboard: new Keyboard().text("بازگشت").keyboard,
         resize_keyboard: true,
       },
     }

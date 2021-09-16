@@ -5,6 +5,7 @@ const {
   multiplayerMatchKeyboard,
   multiplayerMatchCurrentUserKeyboard,
   aboutMessageInlineKeyboard,
+  privateChatKeyboard,
 } = require("../keyboard/multiplayer-match-keyboard");
 const {
   findMatch,
@@ -259,18 +260,12 @@ ${ctx.message.text}`,
     bot.api.sendMessage(
       ctx.session.privateChat.user_id,
       `
-یگ پیام خصوصی از طرف : ${ctx.from.first_name}
+یک پیام خصوصی از طرف : ${ctx.from.first_name}
 
 ${ctx.message.text}`,
       {
         reply_markup: {
-          inline_keyboard: aboutMessageInlineKeyboard(ctx.from.id)
-            .text("گفتگو با بازیکن", `chatBetweenTwo ${ctx.from.id}`)
-            .row()
-            .text("پیامهاش رو نمایش نده", `hiddenMessages ${ctx.from.id}`)
-            .row()
-            .text("پیامهاش رو نمایش بده", `showMessages ${ctx.from.id}`)
-            .inline_keyboard,
+          inline_keyboard: privateChatKeyboard(ctx.from.id),
         },
       }
     );
@@ -279,6 +274,8 @@ ${ctx.message.text}`,
       `پیام شما به ${target.first_name} ارسال شد`
     );
   }
+
+  async callbackPrivateChatPlayer(ctx) {}
 }
 
 module.exports = Multiplayer;

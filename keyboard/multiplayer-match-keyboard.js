@@ -29,8 +29,18 @@ const aboutMessageInlineKeyboard = (user_id) => {
 // .text("گزارش محتوا", `reportMessageContent ${user_id}`)
 // .row()
 
+const privateChatKeyboard = (user_id) => {
+  return aboutMessageInlineKeyboard(user_id)
+    .text("گفتگو با بازیکن", `chatBetweenTwo ${user_id}`)
+    .row()
+    .text("پیامهاش رو نمایش نده", `hiddenMessages ${user_id}`)
+    .row()
+    .text("پیامهاش رو نمایش بده", `showMessages ${user_id}`).inline_keyboard;
+};
+
 module.exports = {
   multiplayerMatchKeyboard,
   multiplayerMatchCurrentUserKeyboard,
   aboutMessageInlineKeyboard,
+  privateChatKeyboard,
 };
