@@ -565,7 +565,6 @@ bot.hears("ثبت گزارش", async (ctx, next) => {
       report_message.message,
       "finally"
     );
-    console.log(result);
     if (result?.remove_user) {
       bot.api.sendMessage(
         ctx.session.report_message.user_id,
@@ -607,14 +606,21 @@ bot.hears("ثبت گزارش", async (ctx, next) => {
         );
       });
     }
-    ctx.reply("گزارش ثبت شد به منوی بازی برگشتید", {
-      reply_markup: {
-        keyboard: ctx.session.report_message.hasTurn
-          ? multiplayerMatchCurrentUserKeyboard.keyboard
-          : multiplayerMatchKeyboard.keyboard,
-        resize_keyboard: true,
-      },
-    });
+    ctx.reply(
+      `گزارش ثبت شد ${
+        result?.finished_game ? "بازی به اتمام رسید" : "به منوی بازی برگشتید"
+      }`,
+      {
+        reply_markup: {
+          keyboard: result?.finished_game
+            ? mainKeyboard.keyboard
+            : ctx.session.report_message.hasTurn
+            ? multiplayerMatchCurrentUserKeyboard.keyboard
+            : multiplayerMatchKeyboard.keyboard,
+          resize_keyboard: true,
+        },
+      }
+    );
     ctx.session.report_message = {};
     return;
   }
@@ -796,7 +802,6 @@ bot.hears("بازی دوستانه", (ctx, next) => {
   //   });
   return next();
 });
-
 
 //* select player count
 
