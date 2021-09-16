@@ -321,7 +321,7 @@ bot.on("callback_query:data", async (ctx, next) => {
   };
   return ctx.reply(
     `
-متن گزارش را ارسالل کنید
+متن گزارش را ارسال کنید
 گزارش شما به گوش دیگر افراد بازی میرسد
 اگر تعداد گزارش ها به تعداد تیم بجز فرد گزارش شده برسد اون فرد گزارش شده از بازی فعلی حذف خواهد شد.
 توجه: متن گزارش باید کمتر از 60 کارکتر باشد`,
@@ -357,14 +357,13 @@ bot.hears("گفتگو با بازیکن خاص", async (ctx) => {
   const match = await findMatch(ctx.from.id);
   let data = [];
   if (!match) return;
-  for (let i = 0; i < match.players.length - 1; i++) {
-    if (match.players[i].user_id !== ctx.from.id) {
-      let u = await bot.api.getChat(match.players[i].user_id);
-      data.push({
-        text: `${u?.first_name?.trim() || "@" + u?.username}`,
-        callback_data: `openPrivateChat ${u.id}`,
-      });
-    }
+  const players = match.players.filter((item) => item.user_id !== ctx.from.id);
+  for (let i = 0; i < players.length; i++) {
+    let u = await bot.api.getChat(players[i].user_id);
+    data.push({
+      text: `${u?.first_name?.trim() || "@" + u?.username}`,
+      callback_data: `openPrivateChat ${u.id}`,
+    });
   }
   let inlineKey = new InlineKeyboard().row(...data);
   ctx.reply("با کدوم بازیکن میخوای خصوصی صحبت کنی؟", {
@@ -746,6 +745,7 @@ bot.on("message", async (ctx, next) => {
   mtp.multipleReport(ctx);
   general.chat(ctx);
   mtp.chatPlayers(ctx);
+  mtp.privateChat(ctx);
   general.duoReporPlayer(ctx);
   mtp.playerSelectedTruthOrDare(ctx);
   return next();

@@ -23,9 +23,8 @@ const multiplayerMatchCurrentUserKeyboard = new Keyboard()
   .text("ترک بازی");
 
 const aboutMessageInlineKeyboard = (user_id) => {
-  return new InlineKeyboard()
-    .text("گزارش بازیکن", `reportPlayer ${user_id}`)
-    .row();
+  return new InlineKeyboard().text("گزارش بازیکن", `reportPlayer ${user_id}`);
+  // .row();
 };
 // .text("گزارش محتوا", `reportMessageContent ${user_id}`)
 // .row()

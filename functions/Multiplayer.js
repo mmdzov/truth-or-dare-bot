@@ -209,6 +209,7 @@ ${ctx.message.text}`);
       return false;
     }
   }
+
   async multipleReport(ctx, next = () => {}) {
     if (Object.keys(ctx.session.report_message).length === 0) return;
     if (ctx.message.text.length > 60) return;
@@ -216,9 +217,16 @@ ${ctx.message.text}`);
     ctx.reply("گزارش شما انجام شد برای ثبت گزارش بر روی دکمه ثبت گزارش بزنید.");
     return next();
   }
+
   async chatPlayers(ctx) {
     const current_match = await findMatch(ctx.from.id);
-    if (!current_match || ctx.message.text.includes("گفتگو با بازیکنان"))
+    if (
+      !current_match ||
+      ctx.message.text.includes("بازگشت") ||
+      !ctx.session.chat?.chat ||
+      Object.keys(ctx.session.privateChat).length > 0 ||
+      ctx.message.text.includes("گفتگو با بازیکنان")
+    )
       return;
     if (Object.keys(ctx.session.chat)?.length === 0) return;
     let players = current_match.players
@@ -242,10 +250,13 @@ ${ctx.message.text}`,
     if (!current_match) return;
     if (
       ctx.message.text.includes("گفتگو با بازیکن خاص") ||
-      Object.keys(ctx.session.privateChat)?.length === 0
+      Object.keys(ctx.session.privateChat)?.length === 0 ||
+      ctx.message.text.includes("بازگشت")
     )
       return;
-    send(
+    let target = await bot.api.getChat(ctx.session.privateChat.user_id);
+
+    bot.api.sendMessage(
       ctx.session.privateChat.user_id,
       `
 یگ پیام خصوصی از طرف : ${ctx.from.first_name}
@@ -254,14 +265,18 @@ ${ctx.message.text}`,
       {
         reply_markup: {
           inline_keyboard: aboutMessageInlineKeyboard(ctx.from.id)
-            .row()
             .text("گفتگو با بازیکن", `chatBetweenTwo ${ctx.from.id}`)
             .row()
             .text("پیامهاش رو نمایش نده", `hiddenMessages ${ctx.from.id}`)
             .row()
-            .text("پیامهاش رو نمایش بده", `showMessages ${ctx.from.id}`),
+            .text("پیامهاش رو نمایش بده", `showMessages ${ctx.from.id}`)
+            .inline_keyboard,
         },
       }
+    );
+    bot.api.sendMessage(
+      ctx.from.id,
+      `پیام شما به ${target.first_name} ارسال شد`
     );
   }
 }
