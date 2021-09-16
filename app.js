@@ -393,7 +393,7 @@ bot.on("callback_query:data", async (ctx, next) => {
       },
     }
   );
-  return next()
+  return next();
 });
 
 bot.hears("بپرس شجاعت یا حقیقت", async (ctx, next) => {
@@ -765,8 +765,9 @@ bot.hears(/[نفره]/g, (ctx, next) => {
   return next();
 });
 
-bot.on("callback_query:data", (ctx) => {
+bot.on("callback_query:data", (ctx, next) => {
   general.callbackQueryData(ctx);
+  return next();
 });
 
 bot.on("message", async (ctx, next) => {

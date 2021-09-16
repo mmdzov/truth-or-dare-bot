@@ -53,7 +53,7 @@ class General {
 
   async callbackQueryData(ctx) {
     let data = ctx.callbackQuery.data;
-    if (!data.includes("hiddenMessages") || !data.includes("showMessages"))
+    if (!data.includes("hiddenMessages") && !data.includes("showMessages"))
       return;
     let match = await findMatch(ctx.from.id);
     if (!match) {
@@ -68,7 +68,7 @@ class General {
       if (result?.alreadyHided) {
         reply(ctx, "قبلا مخفی کردن پیام های این بازیکن را اعمال کردید");
       } else if (result?.hided) {
-        reply(ctx, "پیام های این بازیکن دیگر برای شما نمایش دلده نمی شوند");
+        reply(ctx, "پیام های این بازیکن دیگر برای شما نمایش داده نمی شوند");
       }
     } else if (data.includes("showMessages")) {
       let result = await showMesssagePlayer(

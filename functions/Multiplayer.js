@@ -255,6 +255,15 @@ ${ctx.message.text}`,
       ctx.message.text.includes("بازگشت")
     )
       return;
+    let player = current_match.players.filter(
+      (item) => item.user_id === ctx.session.privateChat.user_id
+    )[0];
+    if (player.hiddenMessages.includes(ctx.from.id))
+      return ctx.reply(`پیام شما برای بازیکن ارسال نشد!
+
+علت : بازیکن مقابل از طرف خودش نمایش پیام های شما را مخفی کرده است.
+
+لطفا بر روی دکمه بازگشت بزنید تا به منوی بازی برگردید`);
     let target = await bot.api.getChat(ctx.session.privateChat.user_id);
 
     bot.api.sendMessage(
@@ -274,8 +283,6 @@ ${ctx.message.text}`,
       `پیام شما به ${target.first_name} ارسال شد`
     );
   }
-
-  async callbackPrivateChatPlayer(ctx) {}
 }
 
 module.exports = Multiplayer;
