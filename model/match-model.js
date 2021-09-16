@@ -229,12 +229,6 @@ class MatchModel {
         from: user_chat,
         to: target_user_chat,
       };
-      console.log(
-        current_match.turn,
-        player.length >= current_match.turn ? current_match.turn + 1 : 1,
-        player.length,
-        current_match.turn
-      );
       let res = await match.findOneAndUpdate(
         { _id: current_match._id },
         {
@@ -299,14 +293,14 @@ class MatchModel {
       );
       if (targetIndex === -1) return { not_found: true };
       if (
-        current_match.players[targetIndex].reports.user_id.filter(
+        current_match.players[targetIndex]?.reports?.user_id?.filter(
           (item) => item === user_id
-        ).length > 0
+        )?.length > 0
       )
         return { prevReported: true };
       if (mode === "finally") {
         const target = current_match.players[targetIndex];
-        if (target?.reports?.length >= current_match.player.length - 1) {
+        if (target?.reports?.length >= current_match.players?.length - 1) {
           let userData = await user.findOne({ user_id: target_id });
           let report = {
             user_id: current_match.players[targetIndex].reports.map(
@@ -332,8 +326,7 @@ class MatchModel {
             remove_user: true,
             users: current_match.players
               .filter(
-                (item) =>
-                  item.user_id !== ctx.from.id && item.user_id !== target_id
+                (item) => item.user_id !== user_id && item.user_id !== target_id
               )
               .map((item) => item.user_id),
           };
@@ -346,7 +339,7 @@ class MatchModel {
           current_match.players[targetIndex].reports = [];
         }
         current_match.players[targetIndex]?.reports?.push(report);
-        match.findOneAndUpdate(
+        await match.findOneAndUpdate(
           { match_id: current_match.match_id },
           { players: current_match.players }
         );
@@ -354,13 +347,14 @@ class MatchModel {
           report: true,
           users: current_match.players
             .filter(
-              (item) =>
-                item.user_id !== ctx.from.id && item.user_id !== target_id
+              (item) => item.user_id !== user_id && item.user_id !== target_id
             )
             .map((item) => item.user_id),
         };
       }
-    } catch (e) {}
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   async hiddenMesssagePlayer(user_id, target_id) {

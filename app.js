@@ -77,8 +77,8 @@ bot.use(
   })
 );
 
-bot.command("start", (ctx, next) => {
-  newuser({
+bot.command("start", async (ctx, next) => {
+  await newuser({
     user_id: ctx.from.id,
     matchs: 0,
     user_unique_id: customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 8)(),
@@ -304,8 +304,7 @@ bot.hears("حقیقت👻", async (ctx) => {
   });
 });
 
-bot.on("callback_query:data", async (ctx, next) => {
-  if (!ctx.callbackQuery.data.includes("reportPlayer")) return next();
+const handleReportPlayer = async (ctx, next = () => {}) => {
   const match = await findMatch(ctx.from.id);
   if (!match) return next();
   let target_id = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
@@ -332,10 +331,15 @@ bot.on("callback_query:data", async (ctx, next) => {
       },
     }
   );
+};
+
+bot.on("callback_query:data", async (ctx, next) => {
+  if (!ctx.callbackQuery.data.includes("reportPlayer")) return next();
+  handleReportPlayer(ctx, next);
   return next();
 });
 
-bot.hears("گفتگو با بازیکنان", async (ctx, next) => {
+bot.hears("👥گفتگو با بازیکنان", async (ctx, next) => {
   const match = await findMatch(ctx.from.id);
   if (!match) return next();
   ctx.session.chat.chat = true;
@@ -354,7 +358,7 @@ bot.hears("گفتگو با بازیکنان", async (ctx, next) => {
   return next();
 });
 
-bot.hears("گفتگو با بازیکن خاص", async (ctx) => {
+bot.hears("🗣گفتگو با بازیکن خاص", async (ctx) => {
   const match = await findMatch(ctx.from.id);
   let data = [];
   if (!match) return;
@@ -496,8 +500,53 @@ bot.hears("گزارش بازیکن", (ctx, next) => {
     "علت گزارش علیه بازیکن را در قالب یک پیام بفرستید استفاده از الفاظ رکیک با مسدود کردن شما توسط ربات و نادیده گرفتن گزارش شما همراه خواهد بود",
     {
       reply_markup: {
-        keyboard: new Keyboard().text("ثبت گزارش").row().text("لغو گزارش")
-          .keyboard,
+        keyboard: reportKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+  return next();
+});
+
+bot.hears("⚠️گزارش بازیکن", async (ctx, next) => {
+  const match = await findMatch(ctx.from.id);
+  let data = [];
+  if (!match) return;
+  const players = match.players.filter((item) => item.user_id !== ctx.from.id);
+  for (let i = 0; i < players.length; i++) {
+    let u = await bot.api.getChat(players[i].user_id);
+    data.push({
+      text: `${u?.first_name?.trim() || "@" + u?.username}`,
+      callback_data: `reportPlayer ${u.id}`,
+    });
+  }
+  let inlineKey = new InlineKeyboard().row(...data);
+  ctx.reply("میخوای گزارش کدوم بازیکنو ثبت کنی دوست من؟", {
+    reply_markup: { inline_keyboard: inlineKey.inline_keyboard },
+  });
+});
+
+bot.hears("❗️ گزارش بازی", (ctx, next) => {
+  ctx.session.player.report = true;
+  ctx.reply(
+    "علت گزارش علیه بازیکن را در قالب یک پیام بفرستید استفاده از الفاظ رکیک با مسدود کردن شما توسط ربات و نادیده گرفتن گزارش شما همراه خواهد بود",
+    {
+      reply_markup: {
+        keyboard: reportKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+  return next();
+});
+
+bot.hears("📝جزییات بازی", (ctx, next) => {
+  ctx.session.player.report = true;
+  ctx.reply(
+    "علت گزارش علیه بازیکن را در قالب یک پیام بفرستید استفاده از الفاظ رکیک با مسدود کردن شما توسط ربات و نادیده گرفتن گزارش شما همراه خواهد بود",
+    {
+      reply_markup: {
+        keyboard: reportKeyboard.keyboard,
         resize_keyboard: true,
       },
     }
@@ -508,12 +557,14 @@ bot.hears("گزارش بازیکن", (ctx, next) => {
 bot.hears("ثبت گزارش", async (ctx, next) => {
   if (Object.keys(ctx.session.report_message).length > 0) {
     const report_message = ctx.session.report_message;
+    console.log(report_message);
     let result = await checkUserReport(
       ctx.from.id,
       report_message.user_id,
       report_message.message,
       "finally"
     );
+    console.log(result);
     if (result?.remove_user) {
       bot.api.sendMessage(
         ctx.session.report_message.user_id,

@@ -1,15 +1,14 @@
 const user = require("../schema/user-schema");
 
 class UserModel {
-  newuser(data) {
-    user.findOne({ user_id: data.user_id }, (err, d) => {
-      if (err) return console.log(err);
-      if (!d) {
-        user.create(data, (err, result) => {
-          if (err) console.log(err);
-        });
-      }
-    });
+  async newuser(data) {
+    let player = await user.findOne({ user_id: data.user_id });
+    console.log(player);
+    if (!player) {
+      user.create(data, (err, result) => {
+        if (err) console.log(err);
+      });
+    }
   }
 
   async viewUserSetting(user_id) {
