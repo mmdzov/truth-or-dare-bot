@@ -1,4 +1,4 @@
-const { session, Keyboard } = require("grammy");
+const { session, Keyboard, InlineKeyboard } = require("grammy");
 const { customAlphabet } = require("nanoid");
 const bot = require("./config/require");
 const DuoPlay = require("./functions/duoPlay");
@@ -44,8 +44,9 @@ bot.use(
         selectGender: false,
         chat: {
           hasTurn: false,
-          chat: true,
+          chat: false,
         },
+        privateChat: {},
         waitForFindPlayer: false,
         selectTargetGender: false,
         findPlayer: false,
@@ -135,6 +136,18 @@ bot.hears("بازگشت", async (ctx, next) => {
       },
     });
     ctx.session.chat = {};
+    return next();
+  }
+  if (Object.keys(ctx.session.privateChat)?.length > 0) {
+    ctx.reply("به منوی بازی برگشتی دوست من", {
+      reply_markup: {
+        keyboard: ctx.session.privateChat?.hasTurn
+          ? multiplayerMatchCurrentUserKeyboard.keyboard
+          : multiplayerMatchKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
+    ctx.session.privateChat = {};
     return next();
   }
   ctx.reply(`دستورت چیه دوست من`, {
@@ -332,7 +345,50 @@ bot.hears("گفتگو با بازیکنان", async (ctx, next) => {
     "هم اکنون می توانید با بازیکنان گفتگو کنید برای لغو انجام می توانید بر روی دکمه بازگشت بزنید",
     {
       reply_markup: {
-        keyboard: new Keyboard().text("بازگشت"),
+        keyboard: new Keyboard().text("بازگشت").keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+  return next();
+});
+
+bot.hears("گفتگو با بازیکن خاص", async (ctx) => {
+  const match = await findMatch(ctx.from.id);
+  let data = [];
+  if (!match) return;
+  for (let i = 0; i < match.players.length - 1; i++) {
+    if (match.players[i].user_id !== ctx.from.id) {
+      let u = await bot.api.getChat(match.players[i].user_id);
+      data.push({
+        text: `${u?.first_name?.trim() || "@" + u?.username}`,
+        callback_data: `openPrivateChat ${u.id}`,
+      });
+    }
+  }
+  let inlineKey = new InlineKeyboard().row(...data);
+  ctx.reply("با کدوم بازیکن میخوای خصوصی صحبت کنی؟", {
+    reply_markup: { inline_keyboard: inlineKey.inline_keyboard },
+  });
+});
+
+bot.on("callback_query:data", async (ctx, next) => {
+  const match = await findMatch(ctx.from.id);
+  if (!match) return;
+  if (!ctx.callbackQuery.data.includes("openPrivateChat")) return next;
+  let user_id = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
+  ctx.session.privateChat = {
+    user_id,
+    hasTurn: match.question.from.id === ctx.from.id,
+  };
+  let target = await bot.api.getChat(user_id);
+  ctx.reply(
+    `
+هم اکنون می توانید با ${target.first_name} گفتگو کنید 
+برای لغو گفتگو بر روی بازگشت بزنید`,
+    {
+      reply_markup: {
+        keyboard: new Keyboard().text("بازگشت").keyboard,
         resize_keyboard: true,
       },
     }

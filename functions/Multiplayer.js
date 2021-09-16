@@ -218,7 +218,8 @@ ${ctx.message.text}`);
   }
   async chatPlayers(ctx) {
     const current_match = await findMatch(ctx.from.id);
-    if (!current_match) return;
+    if (!current_match || ctx.message.text.includes("گفتگو با بازیکنان"))
+      return;
     if (Object.keys(ctx.session.chat)?.length === 0) return;
     let players = current_match.players
       .map((item) => item.user_id)
@@ -234,6 +235,34 @@ ${ctx.message.text}`,
       );
     });
     ctx.reply("پیام شما برای تمام بازیکنان ارسال شد.");
+  }
+
+  async privateChat(ctx) {
+    const current_match = await findMatch(ctx.from.id);
+    if (!current_match) return;
+    if (
+      ctx.message.text.includes("گفتگو با بازیکن خاص") ||
+      Object.keys(ctx.session.privateChat)?.length === 0
+    )
+      return;
+    send(
+      ctx.session.privateChat.user_id,
+      `
+یگ پیام خصوصی از طرف : ${ctx.from.first_name}
+
+${ctx.message.text}`,
+      {
+        reply_markup: {
+          inline_keyboard: aboutMessageInlineKeyboard(ctx.from.id)
+            .row()
+            .text("گفتگو با بازیکن", `chatBetweenTwo ${ctx.from.id}`)
+            .row()
+            .text("پیامهاش رو نمایش نده", `hiddenMessages ${ctx.from.id}`)
+            .row()
+            .text("پیامهاش رو نمایش بده", `showMessages ${ctx.from.id}`),
+        },
+      }
+    );
   }
 }
 
