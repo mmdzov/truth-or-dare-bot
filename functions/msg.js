@@ -21,7 +21,13 @@ async function send(user_id, message = "", keyboard, ...options) {
   } catch (e) {}
 }
 
-async function advanceSend(ctx, to = "", keyboard = {}, callback = () => {}) {
+async function advanceSend(
+  ctx,
+  to = "",
+  inline_keyboard = {},
+  keyboard = {},
+  callback = () => {}
+) {
   try {
     const Method = [
       "sendVoice",
@@ -45,7 +51,11 @@ async function advanceSend(ctx, to = "", keyboard = {}, callback = () => {}) {
             ctx.message?.[n],
           {
             caption: ctx.message?.caption ?? ctx.message?.text,
-            reply_markup: keyboard,
+            reply_markup: {
+              inline_keyboard: inline_keyboard?.inline_keyboard,
+              keyboard: keyboard?.keyboard,
+              resize_keyboard: true,
+            },
           }
         );
         callback();

@@ -19,8 +19,9 @@ const {
   findMultipleMatch,
 } = require("../model/queue-model");
 const queue = require("../schema/queue-schema");
+const General = require("./General");
 const { reply, send, advanceSend } = require("./msg");
-
+const general = new General();
 class Multiplayer {
   constructor() {}
   async handleStartQueue(ctx, multiplayer) {
@@ -28,6 +29,7 @@ class Multiplayer {
     ctx.session.waitForFindPlayer = true;
     const data = {
       multiplayer: mtp, //! this is test but parameter is multiplayer
+      player_numbers: multiplayer,
       user_id: ctx.from.id,
       date: Date.now(),
       matched: undefined,
@@ -48,10 +50,16 @@ class Multiplayer {
       }
       let queueInterval = setInterval(() => newMatchUser(ctx), 8000);
       async function newMatchUser() {
+        const match = await findMatch(ctx.from.id);
+        if (match) {
+          ChangeFindPlayer();
+          clearInterval(queueInterval);
+          return;
+        }
         if (ctx.session.waitForFindPlayer === false) {
           return clearInterval(queueInterval);
         }
-        let result = await findMultipleMatch(ctx.from.id, mtp);
+        let result = await findMultipleMatch(ctx.from.id, mtp, multiplayer);
         if (result?.startMatch) {
           result.player_id_list.map((item) => {
             send(item, `تیم تکمیل شد و بازی شروع می شود.`);
@@ -85,22 +93,28 @@ class Multiplayer {
                 multiplayerMatchKeyboard.keyboard
               );
             });
+          ChangeFindPlayer();
+          clearInterval(queueInterval);
         }
-        // });
-        ChangeFindPlayer();
-        clearInterval(queueInterval);
         return;
       }
-      // let getCurrentPlayer = await queue.findOne({ user_id: ctx.from.id });
-      // if (!getCurrentPlayer) {
-      //   ChangeFindPlayer();
-      //   clearInterval(queueInterval);
-      // }
     }
-    // } else reply(ctx, "خطایی رخ داده لطفا کمی بعد دوباره امتحان کنید");
   }
 
-  async playerSelectedTruthOrDare(ctx) {
+  async playerSelectedTruthOrDare(ctx, storage) {
+    const text = ctx.message.text;
+    let ignore_keyboards = [
+      "👥گفتگو با بازیکنان",
+      "🗣گفتگو با بازیکن خاص",
+      "⚠️گزارش بازیکن",
+      "❗️ گزارش بازی",
+      "📝جزئیات بازی",
+      "🚷ترک بازی",
+      "بازگشت",
+    ];
+    let pss = ctx.session.process;
+    if (ignore_keyboards.includes(text)) return;
+    if (Object.values(pss).includes(true)) return;
     const match = await findMatch(ctx.from.id);
     if (!match) return;
     // if(match.players.filter(item => item.user_id === ctx.from.id && item.capacity <=0)) {
@@ -121,12 +135,16 @@ class Multiplayer {
         aboutMessageInlineKeyboard(qst.from.id)
       );
       reply(ctx, `پیامت برای ${qst.to.first_name} ارسال شد دوست من.`);
+      general?.disableAllProcessPlayer(qst.to.id, storage);
       match.players.map((item) => {
         if (item.user_id !== qst.from.id || item.user_id !== qst.to.id) {
-          send(`${qst.from.first_name} به ${qst.to.first_name} گفت که باید چیکار کنه
+          send(
+            `${qst.from.first_name} به ${qst.to.first_name} گفت که باید چیکار کنه
 کاری که ${qst.to.first_name} باید انجام بده: 
 
-${ctx.message.text}`);
+${ctx.message.text}`,
+            aboutMessageInlineKeyboard(qst.from.id)
+          );
         }
       });
     } else if (
@@ -160,11 +178,13 @@ ${ctx.message.text}`);
             ctx,
             item.user_id,
             aboutMessageInlineKeyboard(qst.to.id),
+            multiplayerMatchKeyboard,
             () => {
               send(
                 qst.to.id,
                 `پیامت برای ${qst.from.first_name} ارسال شد دوست من`
               );
+              general?.disableAllProcessPlayer(qst.from.id, storage);
             }
           );
         }
@@ -220,6 +240,7 @@ ${ctx.message.text}`);
   }
 
   async chatPlayers(ctx) {
+    if (!ctx.session.process.players_chat) return;
     const current_match = await findMatch(ctx.from.id);
     if (
       !current_match ||
@@ -231,22 +252,33 @@ ${ctx.message.text}`);
       return;
     if (Object.keys(ctx.session.chat)?.length === 0) return;
     let players = current_match.players
-      .map((item) => item.user_id)
-      .filter((item) => item !== ctx.from.id);
+      .map((item) => ({
+        user_id: item.user_id,
+        hiddenMessages: item.hiddenMessages,
+      }))
+      .filter((item) => item.user_id !== ctx.from.id);
     players.map((item) => {
-      bot.api.sendMessage(
-        item,
-        `
-یک پیام از طرف ${ctx.from.first_name} 
-      
-${ctx.message.text}`,
-        aboutMessageInlineKeyboard(ctx.from.id)
-      );
+      if (!item.hiddenMessages.includes(ctx.from.id)) {
+        bot.api.sendMessage(
+          item.user_id,
+          `
+  یک پیام از طرف ${ctx.from.first_name} 
+        
+  ${ctx.message.text}`,
+          {
+            reply_markup: {
+              inline_keyboard: privateChatKeyboard(ctx.from.id),
+            },
+          }
+        );
+      }
     });
-    ctx.reply("پیام شما برای تمام بازیکنان ارسال شد.");
+    let sended = await ctx.reply("پیام شما برای تمام بازیکنان ارسال شد.");
+    setTimeout(() => sended.delete(), 2000);
   }
 
   async privateChat(ctx) {
+    if (!ctx.session.process.player_chat) return;
     const current_match = await findMatch(ctx.from.id);
     if (!current_match) return;
     if (

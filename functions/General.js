@@ -48,7 +48,9 @@ class General {
         );
       }
     });
-    reply(ctx, "پیام شما به تمام بازیکنان ارسال شد");
+    bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
+      text: "پیام شما به تمام بازیکنان ارسال شد",
+    });
   }
 
   async callbackQueryData(ctx) {
@@ -57,7 +59,9 @@ class General {
       return;
     let match = await findMatch(ctx.from.id);
     if (!match) {
-      ctx.reply("شما هنوز بازی شروع نکردید");
+      bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
+        text: "شما هنوز بازی شروع نکردید",
+      });
       return;
     }
     if (data.includes("hiddenMessages")) {
@@ -66,9 +70,13 @@ class General {
         +data.match(/[0-9]/g).join("")
       );
       if (result?.alreadyHided) {
-        reply(ctx, "قبلا مخفی کردن پیام های این بازیکن را اعمال کردید");
+        bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
+          text: "قبلا مخفی کردن پیام های این بازیکن را اعمال کردید",
+        });
       } else if (result?.hided) {
-        reply(ctx, "پیام های این بازیکن دیگر برای شما نمایش داده نمی شوند");
+        bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
+          text: "پیام های این بازیکن دیگر برای شما نمایش داده نمی شوند",
+        });
       }
     } else if (data.includes("showMessages")) {
       let result = await showMesssagePlayer(
@@ -76,9 +84,13 @@ class General {
         +data.match(/[0-9]/g).join("")
       );
       if (result?.alreadyShow) {
-        reply(ctx, "قبلا نمایش پیام های این بازیکن را اعمال کردی");
+        bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
+          text: "قبلا نمایش پیام های این بازیکن را اعمال کردی",
+        });
       } else if (result?.showing) {
-        reply(ctx, "پیام های این بازیکن برای شما نمایش داده می شوند");
+        bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
+          text: "پیام های این بازیکن برای شما نمایش داده می شوند",
+        });
       }
     }
   }
@@ -187,6 +199,41 @@ class General {
         });
       }
       ctx.session.player.leave_game = false;
+    }
+  }
+
+  disableAllProcess(ctx) {
+    ctx.session.process.player_chat = false;
+    ctx.session.process.players_chat = false;
+    ctx.session.process.report_player = false;
+    ctx.session.process.report_game = false;
+    ctx.session.process.leave_game = false;
+    ctx.session.selectGender = false;
+  }
+
+  async disableAllProcessPlayer(user_id, storage) {
+    const match = await findMatch(user_id);
+    if (!match) return;
+    let question = match.question;
+    let pss = {
+      players_chat: false,
+      player_chat: false,
+      report_player: false,
+      report_game: false,
+      leave_game: false,
+    };
+    if (question.from.id === user_id) {
+      let sessions = storage.read(question.from.id + "");
+      if (sessions?.process) {
+        sessions.process = pss;
+        storage.write(question.from.id + "", sessions);
+      }
+    } else if (question.to.id === user_id) {
+      let sessions = storage.read(question.to.id + "");
+      if (sessions?.process) {
+        sessions.process = pss;
+        storage.write(question.to.id + "", sessions);
+      }
     }
   }
 }

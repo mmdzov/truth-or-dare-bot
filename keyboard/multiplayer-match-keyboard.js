@@ -7,7 +7,7 @@ const multiplayerMatchKeyboard = new Keyboard()
   .text("⚠️گزارش بازیکن")
   .text("❗️ گزارش بازی")
   .row()
-  .text("📝جزییات بازی")
+  .text("📝جزئیات بازی")
   .text("🚷ترک بازی");
 
 const multiplayerMatchCurrentUserKeyboard = new Keyboard()
@@ -19,7 +19,7 @@ const multiplayerMatchCurrentUserKeyboard = new Keyboard()
   .text("⚠️گزارش بازیکن")
   .text("❗️ گزارش بازی")
   .row()
-  .text("📝جزییات بازی")
+  .text("📝جزئیات بازی")
   .text("🚷ترک بازی");
 
 const aboutMessageInlineKeyboard = (user_id) => {

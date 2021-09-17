@@ -7,6 +7,7 @@ const schema = new Schema({
   turn: { type: Number, default: 1 },
   sender: { type: Number },
   receiver: { type: Number },
+  player_numbers: { type: Number, default: 0 },
   question: { type: Object, default: { from: {}, to: {} } },
 });
 

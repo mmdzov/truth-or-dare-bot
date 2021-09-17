@@ -300,7 +300,7 @@ class MatchModel {
         return { prevReported: true };
       if (mode === "finally") {
         const target = current_match.players[targetIndex];
-        console.log(target?.reports?.length, current_match.players?.length - 1);
+        // console.log(target?.reports?.length, current_match.players?.length - 1);
         if (
           current_match.players.length <= 2 ||
           target?.reports?.length >= current_match.players?.length - 1
@@ -319,7 +319,7 @@ class MatchModel {
                 : users_ids,
             message:
               current_match.players.length <= 2
-                ? [...messages, user_id]
+                ? [...messages, message]
                 : messages,
           };
           userData.reports.push(report);
