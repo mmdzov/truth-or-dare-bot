@@ -7,6 +7,7 @@ const {
   showMesssagePlayer,
   deleteMatch,
   exitMatch,
+  changeTurnNextPlayer,
 } = require("../model/match-model");
 const { addReport } = require("../model/user-model");
 const { send, reply } = require("./msg");
@@ -200,6 +201,45 @@ class General {
       }
       ctx.session.player.leave_game = false;
     }
+  }
+
+  async leaveMultipleGame(ctx) {
+    const match = await findMatch(ctx.from.id);
+    if (!match) return;
+    const qst = match.question;
+    const players = match.players;
+
+    if (players.length <= 2) {
+      await deleteMatch(ctx.from.id);
+      match.players.map((item) => {
+        if (item.user_id !== ctx.from.id) {
+          bot.api.sendMessage(
+            item.user_id,
+            `
+  بازیکن ${ctx.from.first_name} از بازی خارج شد و این بازی به اتمام رسید`,
+            {
+              reply_markup: {
+                keyboard: mainKeyboard.keyboard,
+                resize_keyboard: true,
+              },
+            }
+          );
+        }
+      });
+    }
+
+    if (qst.from.id === ctx.from.id || qst.to.id === ctx.from.id) {
+      changeTurnNextPlayer(ctx.from.id);
+    }
+    match.players.map((item) => {
+      if (item.user_id !== ctx.from.id) {
+        bot.api.sendMessage(
+          item.user_id,
+          `
+بازیکن ${ctx.from.first_name} از بازی خارج شد`
+        );
+      }
+    });
   }
 
   disableAllProcess(ctx) {

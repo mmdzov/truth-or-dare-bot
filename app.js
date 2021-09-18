@@ -735,25 +735,47 @@ bot.hears("خروج از بازی", (ctx, next) => {
   return next();
 });
 
-bot.hears("بله می خواهم خارج شوم", (ctx, next) => {
-  general.leaveGame(ctx);
+bot.hears("بله می خواهم خارج شوم", async (ctx, next) => {
+  const match = await findMatch(ctx.from.id);
+  if (!match) return next();
+  if (match.player_numbers === 2) {
+    general.leaveGame(ctx);
+  } else {
+    general.leaveMultipleGame(ctx);
+  }
   ctx.reply("از بازی خارج شدی و به منوی اصلی بازگشتی دوست من", {
     reply_markup: {
       keyboard: mainKeyboard.keyboard,
       resize_keyboard: true,
     },
   });
+
+  ctx.session.player.leave_game = false;
   return next();
 });
 
-bot.hears("خیر می خواهم ادامه دهم", (ctx, next) => {
+bot.hears("خیر می خواهم ادامه دهم", async (ctx, next) => {
   ctx.session.player.leave_game = false;
-  ctx.reply("خوشحالم که می خوای بازی رو ادامه بدی دوست من", {
-    reply_markup: {
-      keyboard: matchPlayingKeyboard.keyboard,
-      resize_keyboard: true,
-    },
-  });
+  const match = await findMatch(ctx.from.id);
+  if (!match) return next();
+  if (match?.player_numbers === 2) {
+    ctx.reply("خوشحالم که می خوای بازی رو ادامه بدی دوست من", {
+      reply_markup: {
+        keyboard: matchPlayingKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
+  } else {
+    ctx.reply("خوشحالم که می خوای بازی رو ادامه بدی دوست من", {
+      reply_markup: {
+        keyboard:
+          match.question.from.id === ctx.from.id
+            ? multiplayerMatchCurrentUserKeyboard.keyboard
+            : multiplayerMatchKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
+  }
   return next();
 });
 
@@ -866,8 +888,20 @@ bot.hears("بازی دوستانه", (ctx, next) => {
   return next();
 });
 bot.hears("🚷ترک بازی", (ctx, next) => {
-  ctx.session.process.leave_game = true;
-
+  ctx.session.player.leave_game = true;
+  ctx.reply(
+    `آیا اطمینان دارید؟
+اگر از بازی خارج شوید بازیکن مقابل می تواند برای شما گزارش رد کند یا شما را مسدود کند که در صورت مشاهده ده اخطار شما اجازه استفاده ار ربات را ندارید `,
+    {
+      reply_markup: {
+        keyboard: new Keyboard()
+          .text("بله می خواهم خارج شوم")
+          .row()
+          .text("خیر می خواهم ادامه دهم").keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
   return next();
 });
 
