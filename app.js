@@ -37,11 +37,13 @@ const {
   viewUserSetting,
   visibleUserProfile,
   selectGenderUser,
+  addUserFriend,
 } = require("./model/user-model");
 const general = new General();
 const mtp = new Multiplayer();
 const storage = new MemorySessionStorage();
 const { hydrateApi, hydrateContext } = require("@grammyjs/hydrate");
+const { mainFriendshipKeyboard } = require("./keyboard/friendship-keyboard");
 
 bot.use(hydrateContext());
 bot.api.config.use(hydrateApi());
@@ -97,7 +99,20 @@ bot.use(
 );
 
 bot.command("start", async (ctx, next) => {
-  newuser({
+  let refferId = +ctx.match.match(/[0-9]/g).join("");
+  if (refferId) {
+    let result = await addUserFriend(ctx.from.id, refferId);
+    if (result === true) {
+      let getUser = await bot.api.getChat(refferId);
+      ctx.reply(`
+  دعوت دوستت ${getUser.first_name} با موفقیت پذیرفته شد دوست من`);
+      bot.api.sendMessage(
+        refferId,
+        `دوستت ${ctx.from.first_name} دعوت دوستیت رو قبول کرد`
+      );
+    }
+  }
+  await newuser({
     user_id: ctx.from.id,
     matchs: 0,
     user_unique_id: customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 8)(),
@@ -601,18 +616,21 @@ bot.hears("❗️ گزارش بازی", (ctx, next) => {
   return next();
 });
 
-bot.hears("📝جزئیات بازی", (ctx, next) => {
-  ctx.session.player.report = true;
-  ctx.reply(
-    "علت گزارش علیه بازیکن را در قالب یک پیام بفرستید استفاده از الفاظ رکیک با مسدود کردن شما توسط ربات و نادیده گرفتن گزارش شما همراه خواهد بود",
-    {
-      reply_markup: {
-        keyboard: reportKeyboard.keyboard,
-        resize_keyboard: true,
-      },
-    }
-  );
-  return next();
+bot.hears("📝جزئیات بازی", async (ctx, next) => {
+  const match = await findMatch(ctx.from.id);
+  if (!match) return next();
+  let players = [];
+  for (let i = 0; i < match.players.length; i++) {
+    const player = await bot.api.getChat(match.players[i].user_id);
+    players.push(player.first_name);
+  }
+  ctx.reply(`
+بازی ${match.player_numbers} نفره
+
+بازیکنان موجود ${match.players.length} نفر
+
+بازیکنان: 
+${players.join("\n\n")}`);
 });
 
 bot.hears("ثبت گزارش", async (ctx, next) => {
@@ -879,14 +897,40 @@ bot.hears("تنظیمات", (ctx, next) => {
 
 bot.hears("بازی دوستانه", (ctx, next) => {
   ctx.session.select = "friendship";
-  //     ctx.reply(`آیدی یا یوزرنیم تمام دوستاتو توی یه قالب یه پیام برام بفرست
-  //   می تونی برای دوستای فعلیت دعوت نامه بفرستی`,{
-  //       reply_markup: {
-  //           inline_keyboard:
-  //       }
-  //   });
+  ctx.reply(
+    `
+دستورت چیه دوست من`,
+    {
+      reply_markup: {
+        keyboard: mainFriendshipKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
   return next();
 });
+
+bot.hears("افزودن دوست➕", (ctx, next) => {
+  ctx
+    .reply(
+      `
+پیوند یا متن زیر را برای دوستت بفرست و زمانی که روی این پیوند زد یکی از دوستای همدیگر به حسلب میاید `
+    )
+    .then((res) => {
+      ctx.reply(`
+سلام دوست من 
+دوست داری باهمدیگه شجاعت حقیقت بازی کنیم؟ 
+دوست داری آنلاین دونفره و تیمی چند نفره بازی کنی؟
+دوست داری گروهی یا با دوستات بازی کنی؟
+
+من تو رو بازی شجاعت حقیقت دعوت میکنم
+این لینک ربات رو استارت بزن که جزوی از دوستان من هم توی این ربات باشی
+
+t.me/jorathaqiqatonline_bot?start=${ctx.from.id}`);
+    });
+  return next();
+});
+
 bot.hears("🚷ترک بازی", (ctx, next) => {
   ctx.session.player.leave_game = true;
   ctx.reply(

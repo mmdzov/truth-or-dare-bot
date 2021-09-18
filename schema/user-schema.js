@@ -8,6 +8,7 @@ let schema = new Schema({
   matchs: { type: Number },
   visible_profile: { type: Boolean },
   reports: { type: Array },
+  friends: { type: Array },
 });
 
 const user = mongoose.model("users", schema);

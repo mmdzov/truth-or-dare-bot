@@ -226,6 +226,7 @@ class General {
           );
         }
       });
+      return;
     }
 
     if (qst.from.id === ctx.from.id || qst.to.id === ctx.from.id) {

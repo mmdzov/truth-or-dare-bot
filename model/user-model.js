@@ -2,11 +2,13 @@ const user = require("../schema/user-schema");
 
 class UserModel {
   async newuser(data) {
-    let player = await user.findOne({ user_id: data.user_id });
-    if (!player) {
-      user.create(data, (err, result) => {
-        if (err) console.log(err);
-      });
+    if (data?.user_id) {
+      let player = await user.findOne({ user_id: data?.user_id });
+      if (!player?.user_unique_id) {
+        user.create(data, (err, result) => {
+          if (err) console.log(err);
+        });
+      }
     }
   }
 
@@ -15,6 +17,24 @@ class UserModel {
       let data = await user.find({ user_id }).select("-_id");
       return data[0];
     } catch (e) {}
+  }
+
+  async addUserFriend(user_id, target_id) {
+    let player = await user.findOne({ user_id });
+    if (user_id === target_id) return {isEqual: true};
+    if (!player.friends) player.friends = [];
+    if (player.friends?.includes(target_id)) return {isExist: true};
+    let target_player = await user.findOne({ user_id: target_id });
+    if (!target_player) return {not_found: true};
+    if (!player.friends) player.friends = [];
+    target_player.friends.push(user_id);
+    player.friends.push(target_id);
+    await user.findOneAndUpdate({ user_id }, { friends: player.friends });
+    await user.findOneAndUpdate(
+      { user_id: target_id },
+      { friends: target_player.friends }
+    );
+    return true;
   }
 
   async visibleUserProfile(user_id) {
