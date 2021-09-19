@@ -43,7 +43,11 @@ const general = new General();
 const mtp = new Multiplayer();
 const storage = new MemorySessionStorage();
 const { hydrateApi, hydrateContext } = require("@grammyjs/hydrate");
-const { mainFriendshipKeyboard } = require("./keyboard/friendship-keyboard");
+const {
+  mainFriendshipKeyboard,
+  newGameKeyboard,
+  newGameInlineKeyboard,
+} = require("./keyboard/friendship-keyboard");
 
 bot.use(hydrateContext());
 bot.api.config.use(hydrateApi());
@@ -53,6 +57,9 @@ bot.use(
     storage,
     initial() {
       return {
+        friend_game: {
+          new_game: false,
+        },
         process: {
           players_chat: false,
           player_chat: false,
@@ -99,7 +106,7 @@ bot.use(
 );
 
 bot.command("start", async (ctx, next) => {
-  let refferId = +ctx.match.match(/[0-9]/g).join("");
+  let refferId = +ctx.match.match(/[0-9]/g)?.join("");
   if (refferId) {
     let result = await addUserFriend(ctx.from.id, refferId);
     if (result === true) {
@@ -130,6 +137,52 @@ bot.command("start", async (ctx, next) => {
     }
   );
   return next();
+});
+
+bot.hears("بازی جدید🎮", async (ctx) => {
+  const match = await findMatch(ctx.from.id);
+  if (match) return;
+  ctx.session.friend_game.new_game = true;
+  ctx.reply(
+    `منوی انتظار: 
+  
+منو ها برات فعال شد دوست من میتونی صف بازی قبل از شروع رو با منو ها مدیریت کنی`,
+    {
+      reply_markup: {
+        keyboard: newGameInlineKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+});
+
+bot.hears("لغو و بازگشت", (ctx) => {
+  if (ctx.session.friend_game.new_game) {
+    ctx.reply(
+      `
+  دستورت چیه دوست من`,
+      {
+        reply_markup: {
+          keyboard: mainFriendshipKeyboard.keyboard,
+          resize_keyboard: true,
+        },
+      }
+    );
+  }
+});
+
+bot.hears("بروز کردن منوی انتظار", (ctx) => {
+  ctx.reply(
+    `منوی انتظار: 
+  
+منو ها برات بروز شد دوست من میتونی صف بازی قبل از شروع رو با منو ها مدیریت کنی`,
+    {
+      reply_markup: {
+        keyboard: newGameInlineKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
 });
 
 bot.hears("بازی آنلاین", (ctx, next) => {

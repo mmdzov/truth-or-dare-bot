@@ -1,4 +1,4 @@
-const { Keyboard } = require("grammy");
+const { Keyboard, InlineKeyboard } = require("grammy");
 
 const mainFriendshipKeyboard = new Keyboard()
   .text("بازی جدید🎮")
@@ -8,4 +8,21 @@ const mainFriendshipKeyboard = new Keyboard()
   .row()
   .text("بازگشت");
 
-module.exports = { mainFriendshipKeyboard };
+const newGameInlineKeyboard = new Keyboard()
+  .text("بازیکنان آماده👥")
+  .text("شروع بازی🎮")
+  .row()
+  .text("اطلاع به دوستان📣")
+  .row()
+  .text("تغییر لینک اختصاصی♻️")
+  .text("ایجاد لینک اختصاصی🔏")
+  .row()
+  .text("تغییر لینک سریع♻️")
+  .text("ایجاد لینک سریع🔏")
+  .row()
+  .text("لغو و بازگشت");
+
+module.exports = {
+  mainFriendshipKeyboard,
+  newGameInlineKeyboard,
+};
