@@ -43,7 +43,7 @@ class FriendsMatchModel {
       if (players.length === 0) return { notExist: true };
       if (players.includes(user.id)) return { isExist: true };
       const match = await friendsMatch.findOne({ secret_link: match_link });
-      if (match.players.length === 0) {
+      if (match.players.length === 1) {
         match.turn.to = { ...user };
       }
       match.players.push({
@@ -74,7 +74,7 @@ class FriendsMatchModel {
         { players: match.players, turn: match.turn }
       );
       console.log(result);
-      return { players, joined: true };
+      return { players: match.players, joined: true };
     } catch (e) {
       console.log(e);
     }

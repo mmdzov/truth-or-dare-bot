@@ -132,37 +132,45 @@ bot.command("start", async (ctx, next) => {
           resize_keyboard: true,
         },
       });
-      players.map((item) => {
+      result?.players.map((item) => {
+        if (item.id === ctx.from.id) return;
         if (!item.isOwner) {
-          bot.api.sendMessage(
-            item.id,
-            `
+          bot.api
+            .sendMessage(
+              item.id,
+              `
   کاربر جدید ${ctx.from.first_name} وارد بازی شد`,
-            {
-              reply_markup: newPlayerInlineSetting(
-                ctx.from.id,
-                false,
-                item.admin?.remove_player,
-                item.admin?.limit_player,
-                item.admin?.add_new_admin
-              ).inline_keyboard,
-            }
-          );
-        } else {
-          bot.api.sendMessage(
-            item.id,
-            `
+              {
+                reply_markup: {
+                  inline_keyboard: newPlayerInlineSetting(
+                    ctx.from.id,
+                    false,
+                    item.admin?.remove_player,
+                    item.admin?.limit_player,
+                    item.admin?.add_new_admin
+                  ).inline_keyboard,
+                },
+              }
+            )
+            .catch((e) => {});
+        } else if (item?.id !== ctx.from.id) {
+          bot.api
+            .sendMessage(
+              item.id,
+              `
   کاربر جدید ${ctx.from.first_name} وارد بازی شد`,
-            {
-              reply_markup: {
-                inline_keyboard: newPlayerInlineSetting(ctx.from.id, true)
-                  .inline_keyboard,
-              },
-            }
-          );
+              {
+                reply_markup: {
+                  inline_keyboard: newPlayerInlineSetting(ctx.from.id, true)
+                    .inline_keyboard,
+                },
+              }
+            )
+            .catch((e) => {});
         }
       });
     }
+    return;
   }
 
   let refferId = +ctx.match.match(/[0-9]/g)?.join("");

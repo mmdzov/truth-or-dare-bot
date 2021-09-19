@@ -47,7 +47,7 @@ const newPlayerInlineSetting = (
             text: "حذف بازیکن",
             callback_data: `removePlayer_friendship ${user_id}`,
           }
-        : {}
+        : { text: "دکمه قفل شده", callback_data: "دکمه قفل شده" }
     )
     .row(
       limit_player || isOwner
@@ -55,7 +55,7 @@ const newPlayerInlineSetting = (
             text: "محدود کردن بازیکن",
             callback_data: `limitationPlayer_friendship ${user_id}`,
           }
-        : {}
+        : { text: "دکمه قفل شده", callback_data: "دکمه قفل شده" }
     )
     .row(
       promote_player || isOwner
@@ -63,7 +63,7 @@ const newPlayerInlineSetting = (
             text: "ارتقاء بازیکن",
             callback_data: `promotePlayer_friendship ${user_id}`,
           }
-        : {}
+        : { text: "دکمه قفل شده", callback_data: "دکمه قفل شده" }
     );
 };
 
