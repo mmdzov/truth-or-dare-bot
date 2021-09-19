@@ -31,8 +31,16 @@ class FriendsMatchModel {
     }
   }
 
-  async getAllPlayers(match_link) {
-    const match = await friendsMatch.findOne({ secret_link: match_link });
+  async getAllPlayers(match_link, user_id) {
+    let match = null;
+    if (match_link) {
+      match = await friendsMatch.findOne({ secret_link: match_link });
+    } else {
+      match = await friendsMatch.find({});
+      match = match.filter(
+        (item) => item.players.map((_) => _.id === user_id).length > 0
+      )[0];
+    }
     let players = match.players?.map((item) => item.id);
     return [...players];
   }

@@ -283,6 +283,39 @@ bot.hears("لغو و بازگشت", async (ctx, next) => {
   return next();
 });
 
+bot.hears("بازیکنان آماده👥", async (ctx, next) => {
+  let players = await getAllPlayers(null, ctx.from.id);
+  players = players.filter((item) => item !== ctx.from.id);
+  if (players.length === 0) {
+    ctx.reply("هنوز بازیکنی در این بازی شرکت نکرده است");
+    return next();
+  }
+  let names = new InlineKeyboard();
+  for (let i = 0; i < players.length; i++) {
+    let user_chat = await bot.api.getChat(players[i]);
+    names.row(
+      {
+        text: user_chat.first_name,
+        callback_data: "empty",
+      },
+      { text: "👑", callback_data: `promotePlayer_friendship ${players[i]}` },
+      { text: "🗑", callback_data: `removePlayer_friendship ${players[i]}` }
+    );
+  }
+
+  ctx.reply(
+    `
+بازیکنان حال حاظر در انتظار بازی`,
+    {
+      reply_markup: {
+        inline_keyboard: names.inline_keyboard,
+      },
+    }
+  );
+
+  return next();
+});
+
 bot.hears("ایجاد لینک اختصاصی🔏", (ctx, next) => {
   return next();
 });
