@@ -46,8 +46,16 @@ const { hydrateApi, hydrateContext } = require("@grammyjs/hydrate");
 const {
   mainFriendshipKeyboard,
   newGameKeyboard,
-  newGameInlineKeyboard,
+  newGameFriendshipKeyboard,
+  newGameAUserKeyboard,
+  newPlayerInlineSetting,
 } = require("./keyboard/friendship-keyboard");
+const {
+  newMatch,
+  deleteMatch,
+  getAllPlayers,
+  joinUserToFriendMatch,
+} = require("./model/friends-match-model");
 
 bot.use(hydrateContext());
 bot.api.config.use(hydrateApi());
@@ -58,7 +66,7 @@ bot.use(
     initial() {
       return {
         friend_game: {
-          new_game: false,
+          new_game: true, //! default false
         },
         process: {
           players_chat: false,
@@ -106,6 +114,57 @@ bot.use(
 );
 
 bot.command("start", async (ctx, next) => {
+  await newuser({
+    user_id: ctx.from.id,
+    matchs: 0,
+    user_unique_id: customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 8)(),
+    sex: "unavailable",
+    visible_profile: false,
+  });
+
+  if (ctx.match.includes("friendship_match")) {
+    const link = ctx.match.split("friendship_match").join("");
+    let result = await joinUserToFriendMatch(link, ctx.from);
+    if (result?.joined === true) {
+      ctx.reply(`شما وارد بازی شدید`, {
+        reply_markup: {
+          keyboard: newGameAUserKeyboard.keyboard,
+          resize_keyboard: true,
+        },
+      });
+      players.map((item) => {
+        if (!item.isOwner) {
+          bot.api.sendMessage(
+            item.id,
+            `
+  کاربر جدید ${ctx.from.first_name} وارد بازی شد`,
+            {
+              reply_markup: newPlayerInlineSetting(
+                ctx.from.id,
+                false,
+                item.admin?.remove_player,
+                item.admin?.limit_player,
+                item.admin?.add_new_admin
+              ).inline_keyboard,
+            }
+          );
+        } else {
+          bot.api.sendMessage(
+            item.id,
+            `
+  کاربر جدید ${ctx.from.first_name} وارد بازی شد`,
+            {
+              reply_markup: {
+                inline_keyboard: newPlayerInlineSetting(ctx.from.id, true)
+                  .inline_keyboard,
+              },
+            }
+          );
+        }
+      });
+    }
+  }
+
   let refferId = +ctx.match.match(/[0-9]/g)?.join("");
   if (refferId) {
     let result = await addUserFriend(ctx.from.id, refferId);
@@ -119,13 +178,6 @@ bot.command("start", async (ctx, next) => {
       );
     }
   }
-  await newuser({
-    user_id: ctx.from.id,
-    matchs: 0,
-    user_unique_id: customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 8)(),
-    sex: "unavailable",
-    visible_profile: false,
-  });
   ctx.reply(
     `خوش اومدی دوست من 
 لطفا یه گزینه انتخاب کن`,
@@ -139,25 +191,76 @@ bot.command("start", async (ctx, next) => {
   return next();
 });
 
-bot.hears("بازی جدید🎮", async (ctx) => {
+bot.hears("بازی جدید🎮", async (ctx, next) => {
   const match = await findMatch(ctx.from.id);
-  if (match) return;
+  if (match) return next();
   ctx.session.friend_game.new_game = true;
+  let unique_secret = customAlphabet(
+    "1234567890abcdefghijklmnopqrstuvwxyz",
+    8
+  )();
+  await newMatch({
+    players: [
+      {
+        ...ctx.from,
+        unique_id: customAlphabet(
+          "1234567890abcdefghijklmnopqrstuvwxyzQWERTYUIOPASDFGHJKLZXCVBNM",
+          12
+        )(),
+        turn: true,
+        date: Math.floor(Date.now() / 1000),
+        hiddenMessages: [],
+        limits: [],
+        isOwner: true,
+        admin: {
+          isAdmin: false,
+          notify_friends: false,
+          start_game: false,
+          change_game_mode: false,
+          change_link: false,
+          get_link: false,
+          add_new_admin: false,
+          remove_player: false,
+          read_write_limits: false,
+          limit_player: false,
+        },
+      },
+    ],
+    created: Math.floor(Date.now() / 1000),
+    owner: ctx.from.id + "",
+    unique_id: unique_secret,
+    secret_link: unique_secret,
+    bans: [],
+    limits: [],
+    turn: {
+      from: ctx.from,
+      to: {},
+    },
+  });
   ctx.reply(
-    `منوی انتظار: 
-  
-منو ها برات فعال شد دوست من میتونی صف بازی قبل از شروع رو با منو ها مدیریت کنی`,
+    `
+منو ها برات فعال شد دوست من میتونی بازی قبل از شروع رو با منو ها مدیریت کنی
+
+دوست من اگر روی دکمه عمومی کردن بازی بزنی , دوستانت اگر زمانی روی ورود به بازی زدند میتوانند بازی شما رو ببینن و واردش بشن
+اما درحال حاظر بازی شخصی است و تا زمانی که به دوستات درخواست ارسال نکردی متوجه نمیشن یک بازی رو شروع کردی
+
+لینک سریع : 
+t.me/jorathaqiqatonline_bot?start=friendship_match${unique_secret}
+`,
     {
       reply_markup: {
-        keyboard: newGameInlineKeyboard.keyboard,
+        keyboard: newGameFriendshipKeyboard().keyboard,
         resize_keyboard: true,
       },
     }
   );
+  return next();
 });
 
-bot.hears("لغو و بازگشت", (ctx) => {
+bot.hears("لغو و بازگشت", async (ctx, next) => {
   if (ctx.session.friend_game.new_game) {
+    await deleteMatch(ctx.from.id);
+    ctx.session.friend_game.new_game = false;
     ctx.reply(
       `
   دستورت چیه دوست من`,
@@ -169,20 +272,26 @@ bot.hears("لغو و بازگشت", (ctx) => {
       }
     );
   }
+  return next();
 });
 
-bot.hears("بروز کردن منوی انتظار", (ctx) => {
+bot.hears("ایجاد لینک اختصاصی🔏", (ctx, next) => {
+  return next();
+});
+
+bot.hears("بروز کردن منوی انتظار", (ctx, next) => {
   ctx.reply(
     `منوی انتظار: 
   
 منو ها برات بروز شد دوست من میتونی صف بازی قبل از شروع رو با منو ها مدیریت کنی`,
     {
       reply_markup: {
-        keyboard: newGameInlineKeyboard.keyboard,
+        keyboard: newGameFriendshipKeyboard().keyboard,
         resize_keyboard: true,
       },
     }
   );
+  return next();
 });
 
 bot.hears("بازی آنلاین", (ctx, next) => {
