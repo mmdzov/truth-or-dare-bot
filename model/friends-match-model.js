@@ -45,6 +45,32 @@ class FriendsMatchModel {
     return [...players];
   }
 
+  async changePlayerAccess(user_id, access_key) {
+    try {
+      const getMatchs = await friendsMatch.find({});
+      const match = getMatchs.filter((item) =>
+        item.players.map((_) => _.id === user_id)
+      )[0];
+      const index = match.players.findIndex((item) => item.id === user_id);
+      match.players[index].admin[access_key.split(" ").join("")] =
+        !match.players[index].admin[access_key.split(" ").join("")];
+      if (Object.values(match.players[index].admin).includes(true)) {
+        match.players[index].admin.isAdmin = true;
+        match.admins.push(user_id);
+      } else {
+        match.players[index].admin.isAdmin = false;
+        match.admins = match.admins.filter((item) => item !== user_id);
+      }
+      await friendsMatch.findOneAndUpdate(
+        { _id: match._id },
+        { players: match.players, admins: match.admins }
+      );
+      return match.players[index].admin;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async joinUserToFriendMatch(match_link, user = {}) {
     try {
       let players = await new FriendsMatchModel().getAllPlayers(match_link);

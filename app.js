@@ -56,6 +56,7 @@ const {
   getAllPlayers,
   joinUserToFriendMatch,
 } = require("./model/friends-match-model");
+const Friendship = require("./functions/firendship");
 
 bot.use(hydrateContext());
 bot.api.config.use(hydrateApi());
@@ -67,6 +68,19 @@ bot.use(
       return {
         friend_game: {
           new_game: true, //! default false
+          promote: {
+            user_id: 1820867140, //! default 0
+            isAdmin: false,
+            notify_friends: false,
+            start_game: false,
+            change_game_mode: false,
+            change_link: false,
+            get_link: false,
+            add_new_admin: false,
+            remove_player: false,
+            read_write_limits: false,
+            limit_player: false,
+          },
         },
         process: {
           players_chat: false,
@@ -112,6 +126,10 @@ bot.use(
     },
   })
 );
+
+const friendship = new Friendship();
+
+friendship.exec();
 
 bot.command("start", async (ctx, next) => {
   await newuser({
@@ -284,34 +302,7 @@ bot.hears("لغو و بازگشت", async (ctx, next) => {
 });
 
 bot.hears("بازیکنان آماده👥", async (ctx, next) => {
-  let players = await getAllPlayers(null, ctx.from.id);
-  players = players.filter((item) => item !== ctx.from.id);
-  if (players.length === 0) {
-    ctx.reply("هنوز بازیکنی در این بازی شرکت نکرده است");
-    return next();
-  }
-  let names = new InlineKeyboard();
-  for (let i = 0; i < players.length; i++) {
-    let user_chat = await bot.api.getChat(players[i]);
-    names.row(
-      {
-        text: user_chat.first_name,
-        callback_data: "empty",
-      },
-      { text: "👑", callback_data: `promotePlayer_friendship ${players[i]}` },
-      { text: "🗑", callback_data: `removePlayer_friendship ${players[i]}` }
-    );
-  }
-
-  ctx.reply(
-    `
-بازیکنان حال حاظر در انتظار بازی`,
-    {
-      reply_markup: {
-        inline_keyboard: names.inline_keyboard,
-      },
-    }
-  );
+  await friendship.readyPlayers(ctx);
 
   return next();
 });
