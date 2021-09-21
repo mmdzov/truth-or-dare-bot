@@ -39,7 +39,7 @@ class FriendsMatchModel {
       if (!getMatch) return false;
       const player = getMatch.players.filter((item) => item.id === user_id)[0];
       if (!player.admin[access_key] && +getMatch.owner !== user_id)
-        return { not_access: true };
+        return false;
       return { player, match: getMatch };
     } catch (e) {
       console.log(e);
@@ -55,6 +55,20 @@ class FriendsMatchModel {
     } catch (e) {
       console.log(e);
     }
+  }
+
+  async changeGameMode(user_id) {
+    const access = await new FriendsMatchModel().hasAccessFeature(
+      user_id,
+      "change_game_mode"
+    );
+    if (!access) return false;
+    const newMode = access.match.mode === "private" ? "public" : "private";
+    await friendsMatch.findOneAndUpdate(
+      { _id: access.match._id },
+      { mode: newMode }
+    );
+    return { mode: newMode, access, isOwner: +access.match.owner === user_id };
   }
 
   async getAllPlayers(match_link, user_id) {

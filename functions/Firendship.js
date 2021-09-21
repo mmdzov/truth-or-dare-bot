@@ -3,12 +3,14 @@ const bot = require("../config/require");
 const {
   setAdminAccessLevel,
   newGameAdminKeyboard,
+  newGameFriendshipKeyboard,
 } = require("../keyboard/friendship-keyboard");
 const friendsMatchModel = require("../model/friends-match-model");
 const {
   getAllPlayers,
   changePlayerAccess,
   hasAccessFeature,
+  changeGameMode,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -154,7 +156,7 @@ ${datas[index].title} برای شما ${
     //! notify friends
     bot.hears("اطلاع به دوستان📣", async (ctx) => {
       let access = await hasAccessFeature(ctx.from.id, "notify_friends");
-      if (access?.not_access || !access) return;
+      if (!access) return;
       let friends = await getUserFriends(ctx.from.id);
       friends = friends.filter(
         (item) =>
@@ -196,6 +198,30 @@ ${datas[index].title} برای شما ${
         },
       });
     });
+
+    //! change game mode
+    let gameModes = ["شخصی کردن بازی🔑", "عمومی کردن بازی🌍"];
+    for (let i = 0; i < gameModes.length; i++) {
+      bot.hears(gameModes[i], async (ctx) => {
+        const result = await changeGameMode(ctx.from.id);
+        if (!result || !result?.mode) return;
+        result.access.match.players.map((item) => {
+          bot.api.sendMessage(
+            item.id,
+            `حالت بازی آپدیت شد
+    حالت جدید : ${result.mode === "public" ? "عمومی" : "شخصی"}`,
+            {
+              reply_markup: {
+                keyboard: item.isOwner
+                  ? newGameFriendshipKeyboard(result.mode).keyboard
+                  : newGameAdminKeyboard(item.admin, result.mode).keyboard,
+                resize_keyboard: true,
+              },
+            }
+          );
+        });
+      });
+    }
   }
 }
 
