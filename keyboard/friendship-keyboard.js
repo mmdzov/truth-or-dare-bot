@@ -28,11 +28,43 @@ const newGameFriendshipKeyboard = (mode = "private") => {
     .text("لغو و بازگشت");
 };
 
-const newGameAUserKeyboard = new Keyboard()
-  .text("گفتگو")
-  .text("بازیکنان")
-  .row()
-  .text("لغو و بازگشت");
+const newGameAdminKeyboard = (promoteData = {}, mode = "") => {
+  let keyboard = new Keyboard().text("بازیکنان آماده👥").text("گفتگو");
+  let datas = [
+    [
+      { name: "start_game", title: "شروع بازی🎮" },
+      { name: "notify_friends", title: "اطلاع به دوستان📣" },
+    ],
+    [
+      {
+        name: "change_game_mode",
+        title:
+          mode === ""
+            ? "-"
+            : mode === "public"
+            ? "شخصی کردن بازی🔑"
+            : "عمومی کردن بازی🌍",
+      },
+    ],
+    [{ name: "change_link", title: "ایجاد/تغییر لینک اختصاصی🔏" }],
+    [{ name: "change_link", title: "ایجاد/تغییر لینک سریع🔏" }],
+    [
+      { name: "add_new_admin", title: "افزودن ادمین👑" },
+      { name: "get_link", title: "دریافت لینک بازی🗳" },
+    ],
+  ];
+  let newData = datas
+    .map((item) => {
+      return item.filter((i) => promoteData?.[i.name]).map((_) => _.title);
+    })
+    .filter((item) => item.length !== 0);
+
+  for (let i = 0; i < newData.length; i++) {
+    keyboard.row(...newData[i]);
+  }
+  keyboard.row().text("لغو و بازگشت");
+  return keyboard;
+};
 
 const newPlayerInlineSetting = (
   user_id,
@@ -89,8 +121,14 @@ const setAdminAccessLevel = (user_id, promote) => {
   ];
   for (let i = 0; i < keys.length; i++) {
     let trimCan = keys[i].callback_data
+      .match(/[^0-9]/g)
+      .filter((item) => item !== "")
+      .join("")
       .split("_")
-      .filter((item) => item !== "can");
+      .map((item) => (item !== "can" ? item : ""))
+      .filter((item) => item !== "")
+      .join("_")
+      .trim();
     keyboard.row(
       {
         text: promote[trimCan] === true ? "✅" : "❌",
@@ -105,8 +143,8 @@ const setAdminAccessLevel = (user_id, promote) => {
 
 module.exports = {
   setAdminAccessLevel,
+  newGameAdminKeyboard,
   mainFriendshipKeyboard,
   newGameFriendshipKeyboard,
-  newGameAUserKeyboard,
   newPlayerInlineSetting,
 };

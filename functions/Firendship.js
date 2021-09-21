@@ -1,6 +1,9 @@
 const { InlineKeyboard } = require("grammy");
 const bot = require("../config/require");
-const { setAdminAccessLevel } = require("../keyboard/friendship-keyboard");
+const {
+  setAdminAccessLevel,
+  newGameAdminKeyboard,
+} = require("../keyboard/friendship-keyboard");
 const {
   getAllPlayers,
   changePlayerAccess,
@@ -106,8 +109,39 @@ class Friendship {
         ctx.callbackQuery.message.message_id,
         {
           reply_markup: {
-            inline_keyboard: setAdminAccessLevel(user_id, result)
+            inline_keyboard: setAdminAccessLevel(user_id, result.admin)
               .inline_keyboard,
+          },
+        }
+      );
+      let datas = [
+        { name: "notify_friends", title: "اطلاع به دوستان" },
+        { name: "start_game", title: "شروع بازی" },
+        { name: "change_game_mode", title: "تغییر حالت نمایش بازی" },
+        { name: "change_link", title: "تغییر لینک بازی" },
+        { name: "get_link", title: "دریافت لینک بازی" },
+        { name: "add_new_admin", title: "ارتقاء بازیکنان" },
+        { name: "remove_player", title: "حذف بازیکنان" },
+        { name: "read_write_limits", title: "تغییر محدودیت های بازی" },
+        { name: "limit_player", title: "تغییر محدودیت های بازیکن" },
+      ];
+      let index = datas.findIndex(
+        (item) => item.name === Object.keys(result.changed)[0].trim()
+      );
+      // console.log(index,Object.keys(result.changed)[0])
+      bot.api.sendMessage(
+        user_id,
+        `
+${datas[index].title} برای شما ${
+          result.changed[Object.keys(result.changed)[0].trim()]
+            ? "فعال شد"
+            : "غیرفعال شد"
+        }`,
+        {
+          reply_markup: {
+            keyboard: newGameAdminKeyboard(result.admin, result.match.mode)
+              .keyboard,
+            resize_keyboard: true,
           },
         }
       );

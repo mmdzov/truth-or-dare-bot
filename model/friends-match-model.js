@@ -56,16 +56,25 @@ class FriendsMatchModel {
         !match.players[index].admin[access_key.split(" ").join("")];
       if (Object.values(match.players[index].admin).includes(true)) {
         match.players[index].admin.isAdmin = true;
-        match.admins.push(user_id);
+        if (!match.admins.includes(user_id)) {
+          match.admins.push(user_id);
+        }
       } else {
         match.players[index].admin.isAdmin = false;
-        match.admins = match.admins.filter((item) => item !== user_id);
+        match.admins = match.admins.map((item) => item !== user_id);
       }
       await friendsMatch.findOneAndUpdate(
         { _id: match._id },
         { players: match.players, admins: match.admins }
       );
-      return match.players[index].admin;
+      return {
+        match: match,
+        admin: match.players[index].admin,
+        changed: {
+          [access_key]:
+            match.players[index].admin[access_key.split(" ").join("")],
+        },
+      };
     } catch (e) {
       console.log(e);
     }

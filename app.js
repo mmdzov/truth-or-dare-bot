@@ -47,7 +47,6 @@ const {
   mainFriendshipKeyboard,
   newGameKeyboard,
   newGameFriendshipKeyboard,
-  newGameAUserKeyboard,
   newPlayerInlineSetting,
 } = require("./keyboard/friendship-keyboard");
 const {
@@ -146,7 +145,7 @@ bot.command("start", async (ctx, next) => {
     if (result?.joined === true) {
       ctx.reply(`شما وارد بازی شدید`, {
         reply_markup: {
-          keyboard: newGameAUserKeyboard.keyboard,
+          keyboard: newGameAdminKeyboard().keyboard,
           resize_keyboard: true,
         },
       });
