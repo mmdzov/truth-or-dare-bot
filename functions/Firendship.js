@@ -11,6 +11,7 @@ const {
   changePlayerAccess,
   hasAccessFeature,
   changeGameMode,
+  findFriendMatch,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -64,22 +65,22 @@ class Friendship {
   exec() {
     //! handle promote player
     bot.on("callback_query:data", async (ctx, next) => {
-      //   console.log(ctx);
       const promote_data = ctx.callbackQuery.data;
       if (!promote_data.includes("promotePlayer_friendship")) return next();
       const user_id = +promote_data.match(/[0-9]/g).join("");
+      let result = await findFriendMatch(ctx.from.id);
+      if (!result) return;
       ctx.session.friend_game.promote.user_id = user_id;
       let user = await bot.api.getChat(user_id);
+      let player = result.players.filter((item) => item.id === user_id)[0];
       bot.api.editMessageText(
         ctx.from.id,
         ctx.callbackQuery.message.message_id,
         `سطح دسترسی کاربر ${user.first_name} را مشخص کنید`,
         {
           reply_markup: {
-            inline_keyboard: setAdminAccessLevel(
-              user_id,
-              ctx.session.friend_game.promote
-            ).inline_keyboard,
+            inline_keyboard: setAdminAccessLevel(user_id, player.admin)
+              .inline_keyboard,
           },
         }
       );
