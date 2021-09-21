@@ -4,10 +4,13 @@ const {
   setAdminAccessLevel,
   newGameAdminKeyboard,
 } = require("../keyboard/friendship-keyboard");
+const friendsMatchModel = require("../model/friends-match-model");
 const {
   getAllPlayers,
   changePlayerAccess,
+  hasAccessFeature,
 } = require("../model/friends-match-model");
+const { getUserFriends } = require("../model/user-model");
 
 class Friendship {
   async readyPlayers(ctx, editMode = false) {
@@ -146,6 +149,52 @@ ${datas[index].title} برای شما ${
         }
       );
       return next();
+    });
+
+    //! notify friends
+    bot.hears("اطلاع به دوستان📣", async (ctx) => {
+      let access = await hasAccessFeature(ctx.from.id, "notify_friends");
+      if (access?.not_access || !access) return;
+      let friends = await getUserFriends(ctx.from.id);
+      friends = friends.filter(
+        (item) =>
+          access.match.players
+            .map((_) => (item !== ctx.from.id && _.id ? item : undefined))
+            .filter((item) => item)
+            .includes(item) === false
+      );
+      if (friends.length === 0) {
+        ctx.reply(`
+یافت نشد!
+
+دلایل یافت نشدن:
+1. ممکن است در ربات دوستی نداشته باشید
+2. دوستان شما در بازی فعلی وجود دارند
+`);
+        return;
+      }
+      const keyboard = new InlineKeyboard().row({
+        text: "اطلاع به تمام دوستان",
+        callback_data: `submit_notify_friend ALL`,
+      });
+      let users = [];
+      for (let i = 0; i < friends.length; i++) {
+        let userChat = await bot.api.getChat(friends[i]);
+        users.push({
+          callback_data: `submit_notify_friend ${userChat.id}`,
+          text: userChat.first_name,
+        });
+      }
+
+      for (let i = 0; i < users.length; i++) {
+        let nd = users.splice(0, 2);
+        keyboard.row(...nd);
+      }
+      ctx.reply("انتخاب کن که می خوای کدوم دوستات رو به بازیت دعوت کنی", {
+        reply_markup: {
+          inline_keyboard: keyboard.inline_keyboard,
+        },
+      });
     });
   }
 }

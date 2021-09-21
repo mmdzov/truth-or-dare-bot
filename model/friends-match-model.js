@@ -20,6 +20,32 @@ class FriendsMatchModel {
     }
   }
 
+  async findFriendMatch(user_id) {
+    try {
+      let match = await friendsMatch.find({});
+      match = match.filter(
+        (item) => item.players.filter((_) => _.id === user_id).length > 0
+      )[0];
+      if (!match) return false;
+      return match;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async hasAccessFeature(user_id, access_key) {
+    try {
+      const getMatch = await new FriendsMatchModel().findFriendMatch(user_id);
+      if (!getMatch) return false;
+      const player = getMatch.players.filter((item) => item.id === user_id)[0];
+      if (!player.admin[access_key] && +getMatch.owner !== user_id)
+        return { not_access: true };
+      return { player, match: getMatch };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async deleteMatch(user_id) {
     try {
       const owner = await friendsMatch.findOne({ owner: user_id });
