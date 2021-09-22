@@ -48,6 +48,7 @@ const {
   newGameKeyboard,
   newGameFriendshipKeyboard,
   newPlayerInlineSetting,
+  newGameAdminKeyboard,
 } = require("./keyboard/friendship-keyboard");
 const {
   newMatch,
@@ -142,6 +143,7 @@ bot.command("start", async (ctx, next) => {
   if (ctx.match.includes("friendship_match")) {
     const link = ctx.match.split("friendship_match").join("");
     let result = await joinUserToFriendMatch(link, ctx.from);
+    console.log(result);
     if (result?.joined === true) {
       ctx.reply(`شما وارد بازی شدید`, {
         reply_markup: {

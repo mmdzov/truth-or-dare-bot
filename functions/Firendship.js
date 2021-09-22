@@ -12,6 +12,7 @@ const {
   hasAccessFeature,
   changeGameMode,
   findFriendMatch,
+  hasOwnerPlayer,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -23,17 +24,37 @@ class Friendship {
       ctx.reply("هنوز بازیکنی در این بازی شرکت نکرده است");
       return next();
     }
+
     let names = new InlineKeyboard();
+
+    let limits = [
+      { name: "add_new_admin" },
+      { name: "remove_player" },
+      { name: "limit_player" },
+    ];
+    for (let i = 0; i < limits.length; i++) {
+      let result = await hasAccessFeature(ctx.from.id, limits[i].name);
+      if (!result) limits[i].value = false;
+      else limits[i].value = result.match;
+    }
+
     for (let i = 0; i < players.length; i++) {
       let user_chat = await bot.api.getChat(players[i]);
-      names.row(
-        {
-          text: user_chat.first_name,
-          callback_data: "empty",
-        },
-        { text: "👑", callback_data: `promotePlayer_friendship ${players[i]}` },
-        { text: "🗑", callback_data: `removePlayer_friendship ${players[i]}` }
-      );
+      let result = await hasOwnerPlayer(user_chat.id);
+      let resultMe = await hasOwnerPlayer(ctx.from.id);
+
+      names.row({
+        text: user_chat.first_name,
+        callback_data: "empty",
+      });
+
+      if (resultMe || (!result && limits[0].value !== false)) {
+        names.text("👑", `promotePlayer_friendship ${players[i]}`);
+      }
+
+      if (resultMe || (!result && limits[1].value !== false)) {
+        names.text("🗑", `removePlayer_friendship ${players[i]}`);
+      }
     }
     if (editMode) {
       ctx
@@ -120,6 +141,7 @@ class Friendship {
           },
         }
       );
+
       let datas = [
         { name: "notify_friends", title: "اطلاع به دوستان" },
         { name: "start_game", title: "شروع بازی" },
@@ -176,6 +198,7 @@ ${datas[index].title} برای شما ${
 `);
         return;
       }
+
       const keyboard = new InlineKeyboard().row({
         text: "اطلاع به تمام دوستان",
         callback_data: `submit_notify_friend ALL`,

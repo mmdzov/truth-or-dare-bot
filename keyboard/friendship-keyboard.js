@@ -13,7 +13,7 @@ const newGameFriendshipKeyboard = (mode = "private") => {
     .text("بازیکنان آماده👥")
     .text("شروع بازی🎮")
     .row()
-    .text("گفتگو")
+    .text("گفتگو💬")
     .text("اطلاع به دوستان📣")
     .row()
     .text(mode === "public" ? "شخصی کردن بازی🔑" : "عمومی کردن بازی🌍")
@@ -29,7 +29,7 @@ const newGameFriendshipKeyboard = (mode = "private") => {
 };
 
 const newGameAdminKeyboard = (promoteData = {}, mode = "") => {
-  let keyboard = new Keyboard().text("بازیکنان آماده👥").text("گفتگو");
+  let keyboard = new Keyboard().text("بازیکنان آماده👥").text("گفتگو💬");
   let datas = [
     [
       { name: "start_game", title: "شروع بازی🎮" },

@@ -32,6 +32,12 @@ class FriendsMatchModel {
       console.log(e);
     }
   }
+  
+  async hasOwnerPlayer(user_id) {
+    const match = await new FriendsMatchModel().findFriendMatch(user_id);
+    if (!match) return false;
+    return user_id === +match.owner;
+  }
 
   async hasAccessFeature(user_id, access_key) {
     try {
@@ -156,7 +162,6 @@ class FriendsMatchModel {
         { secret_link: match_link },
         { players: match.players, turn: match.turn }
       );
-      console.log(result);
       return { players: match.players, joined: true };
     } catch (e) {
       console.log(e);
