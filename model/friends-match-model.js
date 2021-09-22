@@ -32,7 +32,7 @@ class FriendsMatchModel {
       console.log(e);
     }
   }
-  
+
   async hasOwnerPlayer(user_id) {
     const match = await new FriendsMatchModel().findFriendMatch(user_id);
     if (!match) return false;
@@ -89,6 +89,23 @@ class FriendsMatchModel {
     }
     let players = match.players?.map((item) => item.id);
     return [...players];
+  }
+
+  async removePlayer(user_id, target_id) {
+    try {
+      const match = await new FriendsMatchModel().findFriendMatch(user_id);
+      const players = match.players.filter((item) => item.id !== target_id);
+      if (match.players.filter((item) => item.id === target_id).length === 0)
+        return { not_exist: true };
+      await friendsMatch.findOneAndUpdate(
+        { _id: match._id },
+        { players: players }
+      );
+
+      return { players: match.players };
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   async changePlayerAccess(user_id, access_key) {

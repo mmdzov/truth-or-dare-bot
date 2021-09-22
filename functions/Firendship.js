@@ -5,6 +5,7 @@ const {
   newGameAdminKeyboard,
   newGameFriendshipKeyboard,
 } = require("../keyboard/friendship-keyboard");
+const mainKeyboard = require("../keyboard/main-keyboard");
 const friendsMatchModel = require("../model/friends-match-model");
 const {
   getAllPlayers,
@@ -13,6 +14,7 @@ const {
   changeGameMode,
   findFriendMatch,
   hasOwnerPlayer,
+  removePlayer,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -108,7 +110,48 @@ class Friendship {
       return next();
     });
 
-    //! cancel promote
+    //! remove user callback
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("removePlayer_friendship"))
+        return next();
+      const user_id = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
+      const userChat = await bot.api.getChat(user_id);
+      let result = await removePlayer(ctx.from.id, user_id);
+      if (result?.not_exist) {
+        bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
+          text: "این بازیکن در بازی وجود ندارد",
+        });
+        return next();
+      }
+      if (!result?.players) return next();
+      result.players.map((item) => {
+        if (item.id !== ctx.from.id) {
+          bot.api.sendMessage(
+            item.id,
+            `
+          بازیکن ${userChat.first_name} توسط ${ctx.from.first_name} از بازی حذف شد`
+          );
+        } else {
+          bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
+            text: "بازیکن توسط شما از بازی حذف شد",
+          });
+        }
+      });
+      bot.api.sendMessage(
+        user_id,
+        `
+شما توسط ${ctx.from.first_name} از بازی دوستانه حذف شدید و به منوی اصلی بازگشتید`,
+        {
+          reply_markup: {
+            keyboard: mainKeyboard.keyboard,
+            resize_keyboard: true,
+          },
+        }
+      );
+      return next();
+    });
+
+    //! cancel and back
     bot.on("callback_query:data", (ctx, next) => {
       if (!ctx.callbackQuery.data.includes("cancel_promote_player"))
         return next();
@@ -156,12 +199,11 @@ class Friendship {
       let index = datas.findIndex(
         (item) => item.name === Object.keys(result.changed)[0].trim()
       );
-      // console.log(index,Object.keys(result.changed)[0])
       bot.api.sendMessage(
         user_id,
         `
 ${datas[index].title} برای شما ${
-          result.changed[Object.keys(result.changed)[0].trim()]
+          result.changed[Object.keys(result.changed)[0]]
             ? "فعال شد"
             : "غیرفعال شد"
         }`,
