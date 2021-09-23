@@ -69,6 +69,10 @@ bot.use(
         friend_game: {
           new_game: true, //! default false
           change_link: false,
+          page: {
+            index: 0,
+          },
+          new_game_select_name: {},
           promote: {
             user_id: 1820867140, //! default 0
             isAdmin: false,
@@ -159,18 +163,18 @@ bot.command("start", async (ctx, next) => {
             .sendMessage(
               item.id,
               `
-  کاربر جدید ${ctx.from.first_name} وارد بازی شد`,
-              {
-                reply_markup: {
-                  inline_keyboard: newPlayerInlineSetting(
-                    ctx.from.id,
-                    false,
-                    item.admin?.remove_player,
-                    item.admin?.limit_player,
-                    item.admin?.add_new_admin
-                  ).inline_keyboard,
-                },
-              }
+  کاربر جدید ${ctx.from.first_name} وارد بازی شد`
+              // {
+              //   reply_markup: {
+              //     inline_keyboard: newPlayerInlineSetting(
+              //       ctx.from.id,
+              //       false,
+              //       item.admin?.remove_player,
+              //       item.admin?.limit_player,
+              //       item.admin?.add_new_admin
+              //     ).inline_keyboard,
+              //   },
+              // }
             )
             .catch((e) => {});
         } else if (item?.id !== ctx.from.id) {
@@ -222,6 +226,25 @@ bot.command("start", async (ctx, next) => {
 bot.hears("بازی جدید🎮", async (ctx, next) => {
   const match = await findMatch(ctx.from.id);
   if (match) return next();
+  ctx.session.friend_game.new_game_select_name = {
+    name: "",
+    select: true,
+  };
+  ctx.reply("یک نام کوتاه برای بازی انتخاب کنید.", {
+    reply_markup: {
+      keyboard: new Keyboard().text("بازگشت").keyboard,
+      resize_keyboard: true,
+    },
+  });
+});
+
+bot.on("message", async (ctx, next) => {
+  if (
+    !ctx.session.friend_game.new_game_select_name?.select ||
+    ctx.message.text.includes("بازگشت") ||
+    ctx.message.text.includes("بازی جدید🎮")
+  )
+    return next();
   ctx.session.friend_game.new_game = true;
   let unique_secret = customAlphabet(
     "1234567890abcdefghijklmnopqrstuvwxyz",
@@ -254,8 +277,10 @@ bot.hears("بازی جدید🎮", async (ctx, next) => {
         },
       },
     ],
+    name: ctx.message.text,
     created: Math.floor(Date.now() / 1000),
     owner: ctx.from.id + "",
+
     unique_id: unique_secret,
     secret_link: unique_secret,
     bans: [],

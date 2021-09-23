@@ -22,7 +22,7 @@ const newGameFriendshipKeyboard = (mode = "private") => {
     .row()
     .text("ایجاد/تغییر لینک سریع🔏")
     .row()
-    .text("افزودن ادمین👑")
+    .text("محدودیت بازی📝")
     .text("دریافت لینک بازی🗳")
     .row()
     .text("لغو و بازگشت");
@@ -49,7 +49,7 @@ const newGameAdminKeyboard = (promoteData = {}, mode = "") => {
     [{ name: "change_link", title: "ایجاد/تغییر لینک اختصاصی🔏" }],
     [{ name: "change_link", title: "ایجاد/تغییر لینک سریع🔏" }],
     [
-      { name: "add_new_admin", title: "افزودن ادمین👑" },
+      { name: "limit_game", title: "محدودیت بازی📝" },
       { name: "get_link", title: "دریافت لینک بازی🗳" },
     ],
   ];

@@ -10,6 +10,8 @@ const schema = new Schema({
   limits: { type: Array },
   turn: { type: Object },
   admins: { type: Array },
+  started: { type: Boolean, default: false },
+  name: { type: String },
   mode: { type: String, default: "private" },
   created: { type: Number, default: Date.now() },
 });

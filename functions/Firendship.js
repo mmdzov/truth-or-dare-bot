@@ -17,6 +17,7 @@ const {
   hasOwnerPlayer,
   removePlayer,
   createModifyLink,
+  getPublicMatchs,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -85,6 +86,72 @@ class Friendship {
         )
         .catch((e) => {});
     }
+  }
+
+  async openGameList(ctx) {
+    const keyboard = new InlineKeyboard();
+    const matchs = await getPublicMatchs();
+    const matchLength = matchs.length;
+    let newTrimedMatchs = matchs.splice(ctx.session.friend_game.page.index, 10);
+    if (newTrimedMatchs.length === 0) {
+      ctx.session.friend_game.page.index = 0;
+      newTrimedMatchs = matchs.splice(0, 10);
+    }
+
+    keyboard.row(
+      {
+        text: "ورود",
+        callback_data: `open_friend_game`,
+      },
+      {
+        text: "بازیکنان",
+        callback_data: "player_length_friend_game",
+      },
+      {
+        text: "نام بازی",
+        callback_data: "friend_game_name",
+      },
+      {
+        text: "شروع شده؟",
+        callback_data: "has_started_friend_game",
+      }
+    );
+
+    newTrimedMatchs.map((item) => {
+      keyboard.row(
+        {
+          text: "ورود🚪",
+          callback_data: `open_friend_game ${item.match_id}`,
+        },
+        {
+          text: item.playerLength,
+          callback_data: "player_length_friend_game",
+        },
+        {
+          text:
+            item.name.length > 20 ? item.name.slice(0, 20) + "..." : item.name,
+          callback_data: "friend_game_name",
+        },
+        {
+          text: item?.started ? "✅" : "⏱",
+          callback_data: "has_started_friend_game",
+        }
+      );
+    });
+    if (matchLength > 10) {
+      keyboard.row({
+        text: "صفحه بعد",
+        callback_data: "next_page_friend_match",
+      });
+    }
+
+    if (ctx.session.friend_game.page.index > 0) {
+      keyboard.row({
+        text: "صفحه قبل",
+        callback_data: "prev_page_friend_match",
+      });
+    }
+    return keyboard;
   }
 
   exec() {
@@ -221,9 +288,9 @@ ${datas[index].title} برای شما ${
     });
 
     //! notify friends
-    bot.hears("اطلاع به دوستان📣", async (ctx) => {
+    bot.hears("اطلاع به دوستان📣", async (ctx, next) => {
       let access = await hasAccessFeature(ctx.from.id, "notify_friends");
-      if (!access) return;
+      if (!access) return next();
       let friends = await getUserFriends(ctx.from.id);
       friends = friends.filter(
         (item) =>
@@ -240,7 +307,7 @@ ${datas[index].title} برای شما ${
 1. ممکن است در ربات دوستی نداشته باشید
 2. دوستان شما در بازی فعلی وجود دارند
 `);
-        return;
+        return next();
       }
 
       const keyboard = new InlineKeyboard().row({
@@ -265,14 +332,15 @@ ${datas[index].title} برای شما ${
           inline_keyboard: keyboard.inline_keyboard,
         },
       });
+      return next();
     });
 
     //! change game mode
     let gameModes = ["شخصی کردن بازی🔑", "عمومی کردن بازی🌍"];
     for (let i = 0; i < gameModes.length; i++) {
-      bot.hears(gameModes[i], async (ctx) => {
+      bot.hears(gameModes[i], async (ctx, next) => {
         const result = await changeGameMode(ctx.from.id);
-        if (!result || !result?.mode) return;
+        if (!result || !result?.mode) return next();
         result.access.match.players.map((item) => {
           bot.api.sendMessage(
             item.id,
@@ -288,6 +356,7 @@ ${datas[index].title} برای شما ${
             }
           );
         });
+        return next();
       });
     }
 
@@ -301,6 +370,7 @@ ${datas[index].title} برای شما ${
 لینک جدید را با # ارسال کنید:
 
 نمونه لینک : #new_link_address`);
+      return next();
     });
 
     bot.on("message::hashtag", async (ctx, next) => {
@@ -327,6 +397,7 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${trimTag}`
           );
         });
       }
+      return next();
     });
 
     //! create/modify random-link
@@ -340,11 +411,11 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${trimTag}`
       )();
 
       let _result = await createModifyLink(ctx.from.id, random_link);
-      if (!_result) return;
+      if (!_result) return next();
 
       if (_result?.alreadyExist) {
         ctx.reply("این لینک درحال حاظر در بازی دیگری ثبت شده.");
-        return;
+        return next();
       }
 
       if (_result?.updated) {
@@ -362,6 +433,55 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${random_link}`
           );
         });
       }
+      return next();
+    });
+
+    //!get link
+    bot.hears("دریافت لینک بازی🗳", async (ctx, next) => {
+      const result = await findFriendMatch(ctx.from.id);
+      if (!result) return next();
+      ctx.reply(`لینک بازی فعلی: 
+
+t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
+      return next();
+    });
+
+    //!open game
+    bot.hears("ورود به بازی🚪", async (ctx, next) => {
+      const result = await findFriendMatch(ctx.from.id);
+      if (result) return next();
+      const keyboard = await this.openGameList(ctx);
+      ctx.reply("بازی های در دسترس", {
+        reply_markup: {
+          inline_keyboard: keyboard.inline_keyboard,
+        },
+      });
+    });
+
+    //! select next page open-game
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("next_page_friend_match"))
+        return next();
+      ctx.session.friend_game.page.index += 10;
+      let keyboard = await this.openGameList(ctx);
+      ctx.editMessageReplyMarkup({
+        reply_markup: {
+          inline_keyboard: keyboard.inline_keyboard,
+        },
+      });
+    });
+
+    //! select previous page open-game
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("prev_page_friend_match"))
+        return next();
+      ctx.session.friend_game.page.index -= 10;
+      let keyboard = await this.openGameList(ctx);
+      ctx.editMessageReplyMarkup({
+        reply_markup: {
+          inline_keyboard: keyboard.inline_keyboard,
+        },
+      });
     });
   }
 }

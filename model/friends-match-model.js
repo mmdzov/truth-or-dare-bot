@@ -63,6 +63,22 @@ class FriendsMatchModel {
     }
   }
 
+  async getPublicMatchs() {
+    try {
+      let matchs = await friendsMatch.find({});
+      matchs = matchs.filter((item) => item.mode === "public");
+      matchs = matchs.map((item) => ({
+        playerLength: item.players.length,
+        started: item?.started ?? false,
+        name: item.name,
+        match_id: item._id,
+      }));
+      return matchs;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async createModifyLink(user_id, secret_link) {
     try {
       const match = await new FriendsMatchModel().findFriendMatch(user_id);
