@@ -1,4 +1,5 @@
 const { InlineKeyboard } = require("grammy");
+const { customAlphabet } = require("nanoid");
 const bot = require("../config/require");
 const {
   setAdminAccessLevel,
@@ -323,6 +324,41 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${trimTag}`);
         
 لینک جدید : 
 t.me/jorathaqiqatonline_bot?start=friendship_match${trimTag}`
+          );
+        });
+      }
+    });
+
+    //! create/modify random-link
+    bot.hears("ایجاد/تغییر لینک سریع🔏", async (ctx, next) => {
+      let result = await hasAccessFeature(ctx.from.id, "change_link");
+      if (!result) return next();
+
+      const random_link = customAlphabet(
+        "1234567890abcdefghijklmnopqrstuvwxyzQWERTYUIOPASDFGHJKLZXCVBNM",
+        12
+      )();
+
+      let _result = await createModifyLink(ctx.from.id, random_link);
+      if (!_result) return;
+
+      if (_result?.alreadyExist) {
+        ctx.reply("این لینک درحال حاظر در بازی دیگری ثبت شده.");
+        return;
+      }
+
+      if (_result?.updated) {
+        ctx.reply(`لینک بازی با موفقیت توسط شما بروزرسانی شد.
+            
+لینک جدید : 
+t.me/jorathaqiqatonline_bot?start=friendship_match${random_link}`);
+        _result.players.map((item) => {
+          bot.api.sendMessage(
+            item.id,
+            `لینک بازی با موفقیت توسط ${ctx.from.first_name} بروزرسانی شد.
+            
+لینک جدید : 
+t.me/jorathaqiqatonline_bot?start=friendship_match${random_link}`
           );
         });
       }
