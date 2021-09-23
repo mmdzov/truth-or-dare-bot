@@ -68,6 +68,7 @@ bot.use(
       return {
         friend_game: {
           new_game: true, //! default false
+          change_link: false,
           promote: {
             user_id: 1820867140, //! default 0
             isAdmin: false,

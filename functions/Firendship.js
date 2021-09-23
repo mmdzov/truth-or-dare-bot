@@ -15,6 +15,7 @@ const {
   findFriendMatch,
   hasOwnerPlayer,
   removePlayer,
+  createModifyLink,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -288,6 +289,44 @@ ${datas[index].title} برای شما ${
         });
       });
     }
+
+    //! create/modify private-link
+    bot.hears("ایجاد/تغییر لینک اختصاصی🔏", async (ctx, next) => {
+      let result = await hasAccessFeature(ctx.from.id, "change_link");
+      if (!result) return next();
+
+      ctx.session.friend_game.change_link = true;
+      ctx.reply(`
+لینک جدید را با # ارسال کنید:
+
+نمونه لینک : #new_link_address`);
+    });
+
+    bot.on("message::hashtag", async (ctx, next) => {
+      if (!ctx.session.friend_game.change_link) return next();
+      const trimTag = ctx.message.text.split("#").join("").trim();
+      let result = await createModifyLink(ctx.from.id, trimTag);
+      if (!result) return;
+      if (result?.alreadyExist) {
+        ctx.reply("این لینک درحال حاظر در بازی دیگری ثبت شده.");
+        return;
+      }
+      if (result?.updated) {
+        ctx.reply(`لینک بازی با موفقیت توسط شما بروزرسانی شد.
+        
+لینک جدید : 
+t.me/jorathaqiqatonline_bot?start=friendship_match${trimTag}`);
+        result.players.map((item) => {
+          bot.api.sendMessage(
+            item.id,
+            `لینک بازی با موفقیت توسط ${ctx.from.first_name} بروزرسانی شد.
+        
+لینک جدید : 
+t.me/jorathaqiqatonline_bot?start=friendship_match${trimTag}`
+          );
+        });
+      }
+    });
   }
 }
 

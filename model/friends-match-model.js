@@ -63,6 +63,29 @@ class FriendsMatchModel {
     }
   }
 
+  async createModifyLink(user_id, secret_link) {
+    try {
+      const match = await new FriendsMatchModel().findFriendMatch(user_id);
+      if (!match) return false;
+      let matchs = await friendsMatch.find({});
+      matchs = matchs.filter((item) => item._id !== match._id);
+      let similarLinks = matchs.filter(
+        (item) => item.secret_link === secret_link
+      );
+      if (similarLinks.length > 0) return { alreadyExist: true };
+      await friendsMatch.findOneAndUpdate(
+        { _id: match._id },
+        { secret_link: secret_link }
+      );
+      return {
+        updated: true,
+        players: match.players.filter((item) => item.id !== user_id),
+      };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async changeGameMode(user_id) {
     const access = await new FriendsMatchModel().hasAccessFeature(
       user_id,
