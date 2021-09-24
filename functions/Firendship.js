@@ -1,4 +1,4 @@
-const { InlineKeyboard } = require("grammy");
+const { InlineKeyboard, Keyboard } = require("grammy");
 const { customAlphabet } = require("nanoid");
 const bot = require("../config/require");
 const {
@@ -559,6 +559,63 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
       }
       ctx.editMessageText("بازی های عمومی در دسترس");
       return next();
+    });
+
+    //! chats
+    bot.hears("گفتگو💬", async (ctx, next) => {
+      const match = await findFriendMatch(ctx.from.id);
+      if (!match) return next();
+      ctx.session.friend_game.chat = {
+        hasTurn: false,
+        chat: true,
+      };
+      ctx.reply("هم اکنون می توانید گفتگو کنید", {
+        reply_markup: {
+          keyboard: new Keyboard().text("بازگشت").keyboard,
+          resize_keyboard: true,
+        },
+      });
+      return next();
+    });
+
+    bot.on("message", async (ctx, next) => {
+      if (!ctx.session.friend_game.chat.chat) return next();
+      let ignore_keyboards = [
+        "👥گفتگو با بازیکنان",
+        "🗣گفتگو با بازیکن خاص",
+        "⚠️گزارش بازیکن",
+        "❗️ گزارش بازی",
+        "📝جزئیات بازی",
+        "🚷ترک بازی",
+        "بازگشت",
+        "بازیکنان آماده👥",
+        "شروع بازی🎮",
+        "گفتگو💬",
+        "اطلاع به دوستان📣",
+        "ایجاد/تغییر لینک اختصاصی🔏",
+        "ایجاد/تغییر لینک سریع🔏",
+        "محدودیت بازی📝",
+        "دریافت لینک بازی🗳",
+        "لغو و بازگشت",
+        "شخصی کردن بازی🔑",
+        "عمومی کردن بازی🌍",
+      ];
+      if (ignore_keyboards.includes(ctx.message.text)) return next();
+      const match = await findFriendMatch(ctx.from.id);
+      if (!match) return next();
+      let players = match.players
+        .filter((item) => item.id !== ctx.from.id)
+        .map((item) => item.id);
+      players.map((item) => {
+        bot.api.sendMessage(
+          item,
+          `
+یک پیام از طرف ${ctx.from.first_name}
+
+${ctx.message.text}`
+        );
+      });
+      ctx.reply("پیام شما برای تمام بازیکنان ارسال شد");
     });
   }
 }

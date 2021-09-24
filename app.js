@@ -55,6 +55,7 @@ const {
   deleteMatch,
   getAllPlayers,
   joinUserToFriendMatch,
+  findFriendMatch,
 } = require("./model/friends-match-model");
 const Friendship = require("./functions/firendship");
 
@@ -72,6 +73,10 @@ bot.use(
           page: {
             index: 0,
           },
+          chat: {
+            hasTurn: false,
+            chat: true,
+          }, //! default false
           new_game_select_name: {},
           promote: {
             user_id: 1820867140, //! default 0
@@ -380,6 +385,21 @@ bot.hears("افزودن دوست", (ctx, next) => {
 
 bot.hears("بازگشت", async (ctx, next) => {
   const match = await findMatch(ctx.from.id);
+  if (ctx.session?.friend_game?.chat?.chat) {
+    const _match = await findFriendMatch(ctx.from.id);
+    const getUser = _match.players.filter((item) => item.id === ctx.from.id)[0];
+    ctx.reply(`دستورت چیه دوست من`, {
+      reply_markup: {
+        keyboard:
+          +_match.owner === ctx.from.id
+            ? newGameFriendshipKeyboard(_match.mode).keyboard
+            : newGameAdminKeyboard(getUser.admin, _match.mode).keyboard,
+        resize_keyboard: true,
+      },
+    });
+    ctx.session.friend_game.chat = { hasTurn: false, chat: false };
+    return next();
+  }
   if (ctx.session?.chat?.chat) {
     if (!match) return next();
     ctx.session.process.players_chat = false;
