@@ -496,6 +496,10 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
         ctx.callbackQuery.data.split(" ")[1],
         ctx.from
       );
+      if (result.alreadyJoinedAMatch) {
+        ctx.answerCallbackQuery({ text: "درحال حاظر شما در یک بازی هستید" });
+        return next();
+      }
       if (result?.not_exist) {
         ctx.answerCallbackQuery({
           text: "بازی به اتمام رسیده",

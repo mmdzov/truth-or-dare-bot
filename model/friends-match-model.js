@@ -81,6 +81,10 @@ class FriendsMatchModel {
 
   async openPublicMatch(_id, user = {}) {
     try {
+      const checkMatchJoined = await new FriendsMatchModel().findFriendMatch(
+        user?.id
+      );
+      if (checkMatchJoined) return { alreadyJoinedAMatch: true };
       const match = await friendsMatch.findOne({ _id });
       if (!match) return { not_exist: true };
       if (match.mode === "private") return { is_private: true };
