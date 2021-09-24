@@ -5,8 +5,6 @@ let mainKeyboard = new Keyboard()
   .row()
   .text("بازی دوستانه")
   .row()
-  .text("افزودن دوست")
-  .row()
   .text("تنظیمات");
 
 module.exports = mainKeyboard;

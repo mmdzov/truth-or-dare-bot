@@ -5,6 +5,7 @@ const {
   setAdminAccessLevel,
   newGameAdminKeyboard,
   newGameFriendshipKeyboard,
+  newPlayerInlineSetting,
 } = require("../keyboard/friendship-keyboard");
 const mainKeyboard = require("../keyboard/main-keyboard");
 const friendsMatchModel = require("../model/friends-match-model");
@@ -18,6 +19,7 @@ const {
   removePlayer,
   createModifyLink,
   getPublicMatchs,
+  openPublicMatch,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -27,7 +29,7 @@ class Friendship {
     players = players.filter((item) => item !== ctx.from.id);
     if (players.length === 0) {
       ctx.reply("هنوز بازیکنی در این بازی شرکت نکرده است");
-      return next();
+      return;
     }
 
     let names = new InlineKeyboard();
@@ -451,11 +453,12 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
       const result = await findFriendMatch(ctx.from.id);
       if (result) return next();
       const keyboard = await this.openGameList(ctx);
-      ctx.reply("بازی های در دسترس", {
+      ctx.reply("بازی های عمومی در دسترس", {
         reply_markup: {
           inline_keyboard: keyboard.inline_keyboard,
         },
       });
+      return next();
     });
 
     //! select next page open-game
@@ -469,6 +472,7 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
           inline_keyboard: keyboard.inline_keyboard,
         },
       });
+      return next();
     });
 
     //! select previous page open-game
@@ -482,6 +486,75 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
           inline_keyboard: keyboard.inline_keyboard,
         },
       });
+      return next();
+    });
+
+    //!finally open game
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("open_friend_game")) return next();
+      const result = await openPublicMatch(
+        ctx.callbackQuery.data.split(" ")[1],
+        ctx.from
+      );
+      if (result?.not_exist) {
+        ctx.answerCallbackQuery({
+          text: "بازی به اتمام رسیده",
+        });
+        return next();
+      }
+      if (result?.is_private) {
+        ctx.answerCallbackQuery({
+          text: "این بازی شخصی شده و نمی توانید وارد شوید",
+        });
+        return next();
+      }
+      if (result?.joined === true) {
+        ctx.reply(`شما وارد بازی شدید`, {
+          reply_markup: {
+            keyboard: newGameAdminKeyboard().keyboard,
+            resize_keyboard: true,
+          },
+        });
+        result?.players.map((item) => {
+          if (item.id === ctx.from.id) return;
+          if (!item.isOwner) {
+            bot.api
+              .sendMessage(
+                item.id,
+                `
+    کاربر جدید ${ctx.from.first_name} وارد بازی شد`
+                // {
+                //   reply_markup: {
+                //     inline_keyboard: newPlayerInlineSetting(
+                //       ctx.from.id,
+                //       false,
+                //       item.admin?.remove_player,
+                //       item.admin?.limit_player,
+                //       item.admin?.add_new_admin
+                //     ).inline_keyboard,
+                //   },
+                // }
+              )
+              .catch((e) => {});
+          } else if (item?.id !== ctx.from.id) {
+            bot.api
+              .sendMessage(
+                item.id,
+                `
+    کاربر جدید ${ctx.from.first_name} وارد بازی شد`,
+                {
+                  reply_markup: {
+                    inline_keyboard: newPlayerInlineSetting(ctx.from.id, true)
+                      .inline_keyboard,
+                  },
+                }
+              )
+              .catch((e) => {});
+          }
+        });
+      }
+      ctx.editMessageText("بازی های عمومی در دسترس");
+      return next();
     });
   }
 }

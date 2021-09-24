@@ -79,6 +79,21 @@ class FriendsMatchModel {
     }
   }
 
+  async openPublicMatch(_id, user = {}) {
+    try {
+      const match = await friendsMatch.findOne({ _id });
+      if (!match) return { not_exist: true };
+      if (match.mode === "private") return { is_private: true };
+      let result = await new FriendsMatchModel().joinUserToFriendMatch(
+        match.secret_link,
+        user
+      );
+      return result;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async createModifyLink(user_id, secret_link) {
     try {
       const match = await new FriendsMatchModel().findFriendMatch(user_id);
