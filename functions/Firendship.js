@@ -6,6 +6,7 @@ const {
   newGameAdminKeyboard,
   newGameFriendshipKeyboard,
   newPlayerInlineSetting,
+  limitGameMenuKeyboard,
 } = require("../keyboard/friendship-keyboard");
 const mainKeyboard = require("../keyboard/main-keyboard");
 const friendsMatchModel = require("../model/friends-match-model");
@@ -20,6 +21,7 @@ const {
   createModifyLink,
   getPublicMatchs,
   openPublicMatch,
+  getMatchLimits,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -93,6 +95,7 @@ class Friendship {
   async openGameList(ctx) {
     const keyboard = new InlineKeyboard();
     const matchs = await getPublicMatchs();
+    if (matchs.length === 0) return { not_exist: true };
     const matchLength = matchs.length;
     let newTrimedMatchs = matchs.splice(ctx.session.friend_game.page.index, 10);
     if (newTrimedMatchs.length === 0) {
@@ -453,6 +456,10 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
       const result = await findFriendMatch(ctx.from.id);
       if (result) return next();
       const keyboard = await this.openGameList(ctx);
+      if (keyboard?.not_exist) {
+        ctx.reply("هنوز بازی در دسترس نیست");
+        return next();
+      }
       ctx.reply("بازی های عمومی در دسترس", {
         reply_markup: {
           inline_keyboard: keyboard.inline_keyboard,
@@ -616,6 +623,37 @@ ${ctx.message.text}`
         );
       });
       ctx.reply("پیام شما برای تمام بازیکنان ارسال شد");
+      return next();
+    });
+
+    //! limit game
+    bot.hears("محدودیت بازی📝", async (ctx, next) => {
+      const match = await findFriendMatch(ctx.from.id);
+      if (!match) return next();
+      if (
+        match.players.filter((item) => item.id === ctx.from.id)[0].admin
+          .read_write_limits === false &&
+        +match.owner !== ctx.from.id
+      )
+        return next();
+      let limitKeyboard = limitGameMenuKeyboard(match.match_id, match.limits);
+      ctx.reply("منوی محدودیت بازی", {
+        reply_markup: { inline_keyboard: limitKeyboard.inline_keyboard },
+      });
+    });
+
+    //! set limit game
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("limit-game-")) return next();
+      const match = await findFriendMatch(ctx.from.id);
+      if (!match) return next();
+      let data = ctx.callbackQuery.data;
+      data = data.split("limit-game-");
+      data = data.filter((item) => item !== "").join("");
+      data = data.split(" ");
+            //! working....
+
+      return next()
     });
   }
 }

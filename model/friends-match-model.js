@@ -33,6 +33,17 @@ class FriendsMatchModel {
     }
   }
 
+  async getMatchLimits(user_id) {
+    try {
+      const ff = new FriendsMatchModel();
+      const match = await ff.findFriendMatch(user_id);
+      if (!match) return false;
+      return match.limits;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async hasOwnerPlayer(user_id) {
     const match = await new FriendsMatchModel().findFriendMatch(user_id);
     if (!match) return false;

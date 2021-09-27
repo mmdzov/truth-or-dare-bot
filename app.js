@@ -75,7 +75,7 @@ bot.use(
           },
           chat: {
             hasTurn: false,
-            chat: true,
+            chat: false,
           }, //! default false
           new_game_select_name: {},
           promote: {
@@ -285,16 +285,43 @@ bot.on("message", async (ctx, next) => {
     name: ctx.message.text,
     created: Math.floor(Date.now() / 1000),
     owner: ctx.from.id + "",
-
+    limits: [
+      {
+        name: "send-message",
+        enabled: true,
+      },
+      {
+        name: "send-voice",
+        enabled: true,
+      },
+      {
+        name: "send-video",
+        enabled: true,
+      },
+      {
+        name: "send-file",
+        enabled: true,
+      },
+      {
+        name: "send-sticker",
+        enabled: true,
+      },
+      {
+        name: "send-photo",
+        enabled: true,
+      },
+    ],
     unique_id: unique_secret,
     secret_link: unique_secret,
     bans: [],
-    limits: [],
     turn: {
       from: ctx.from,
       to: {},
     },
   });
+
+  ctx.session.friend_game.new_game_select_name = {};
+
   ctx.reply(
     `
 منو ها برات فعال شد دوست من میتونی بازی قبل از شروع رو با منو ها مدیریت کنی
@@ -1164,7 +1191,7 @@ bot.hears("افزودن دوست➕", (ctx, next) => {
 دوست داری آنلاین دونفره و تیمی چند نفره بازی کنی؟
 دوست داری گروهی یا با دوستات بازی کنی؟
 
-من تو رو بازی شجاعت حقیقت دعوت میکنم
+من تو رو به بازی شجاعت یا حقیقت دعوت میکنم
 این لینک ربات رو استارت بزن که جزوی از دوستان من هم توی این ربات باشی
 
 t.me/jorathaqiqatonline_bot?start=${ctx.from.id}`);

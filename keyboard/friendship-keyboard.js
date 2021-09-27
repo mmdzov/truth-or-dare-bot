@@ -49,7 +49,7 @@ const newGameAdminKeyboard = (promoteData = {}, mode = "") => {
     [{ name: "change_link", title: "ایجاد/تغییر لینک اختصاصی🔏" }],
     [{ name: "change_link", title: "ایجاد/تغییر لینک سریع🔏" }],
     [
-      { name: "limit_game", title: "محدودیت بازی📝" },
+      { name: "read_write_limits", title: "محدودیت بازی📝" },
       { name: "get_link", title: "دریافت لینک بازی🗳" },
     ],
   ];
@@ -132,7 +132,7 @@ const setAdminAccessLevel = (user_id, promote) => {
     keyboard.row(
       {
         text: promote[trimCan] === true ? "✅" : "❌",
-        callback_data: keys[i].callback_data,
+        callback_data: keys[ix].callback_data,
       },
       { ...keys[i] }
     );
@@ -141,9 +141,40 @@ const setAdminAccessLevel = (user_id, promote) => {
   return keyboard;
 };
 
+const limitGameMenuKeyboard = (match_id, limits) => {
+  let keyboard = new InlineKeyboard();
+  let keyValues = [
+    { name: "send-message", title: "ارسال پیام" },
+    { name: "send-voice", title: "ارسال ویس" },
+    { name: "send-file", title: "ارسال فایل" },
+    { name: "send-video", title: "ارسال ویدیو" },
+    { name: "send-photo", title: "ارسال تصویر" },
+    { name: "send-sticker", title: "ارسال استیکر" },
+  ];
+  limits.map((item) => {
+    if (keyValues.filter((i) => i.name === item.name).length !== 0) {
+      keyboard.row(
+        {
+          text: item.enabled ? "✅" : "❌",
+          callback_data: `limit-game-${item.name} ${match_id}`,
+        },
+        {
+          text: keyValues.filter((i) => i.name === item.name)[0].title,
+          callback_data: `limit-content`,
+        }
+      );
+    }
+  });
+  keyboard.inline_keyboard = keyboard.inline_keyboard.filter(
+    (item) => item.length > 0
+  );
+  return keyboard;
+};
+
 module.exports = {
   setAdminAccessLevel,
   newGameAdminKeyboard,
+  limitGameMenuKeyboard,
   mainFriendshipKeyboard,
   newGameFriendshipKeyboard,
   newPlayerInlineSetting,
