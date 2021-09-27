@@ -230,6 +230,19 @@ class FriendsMatchModel {
     }
   }
 
+  async checkPlayerAdmin(match_id, user_id) {
+    try {
+      const match = await friendsMatch.findOne({ _id: match_id });
+      const player = match.players.filter((item) => item.id === user_id)[0];
+      if (player.admin.isAdmin || player.isOwner) {
+        return player;
+      }
+      return false
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async joinUserToFriendMatch(match_link, user = {}) {
     try {
       let players = await new FriendsMatchModel().getAllPlayers(match_link);

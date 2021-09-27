@@ -23,6 +23,7 @@ const {
   getPublicMatchs,
   openPublicMatch,
   getMatchLimits,
+  checkPlayerAdmin,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -647,6 +648,8 @@ ${ctx.message.text}`
     bot.on("callback_query:data", async (ctx, next) => {
       if (!ctx.callbackQuery.data.includes("limit-game-")) return next();
       const match = await findFriendMatch(ctx.from.id);
+      let res = await checkPlayerAdmin(match._id, ctx.from.id);
+      if (!res) return next();
       if (!match) return next();
       let data = ctx.callbackQuery.data;
       data = data.split("limit-game-");
