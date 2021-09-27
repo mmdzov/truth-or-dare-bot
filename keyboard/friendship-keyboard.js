@@ -8,10 +8,10 @@ const mainFriendshipKeyboard = new Keyboard()
   .row()
   .text("بازگشت");
 
-const newGameFriendshipKeyboard = (mode = "private") => {
+const newGameFriendshipKeyboard = (match = {}, mode = "private") => {
   return new Keyboard()
-    .text("بازیکنان آماده👥")
-    .text("شروع بازی🎮")
+    .text("بازیکنان👥")
+    .text(match.started ? "" : "شروع بازی🎮")
     .row()
     .text("گفتگو💬")
     .text("اطلاع به دوستان📣")
@@ -28,11 +28,11 @@ const newGameFriendshipKeyboard = (mode = "private") => {
     .text("لغو و بازگشت");
 };
 
-const newGameAdminKeyboard = (promoteData = {}, mode = "") => {
-  let keyboard = new Keyboard().text("بازیکنان آماده👥").text("گفتگو💬");
+const newGameAdminKeyboard = (match, promoteData = {}, mode = "") => {
+  let keyboard = new Keyboard().text("بازیکنان👥").text("گفتگو💬");
   let datas = [
     [
-      { name: "start_game", title: "شروع بازی🎮" },
+      match.started ? {} : { name: "start_game", title: "شروع بازی🎮" },
       { name: "notify_friends", title: "اطلاع به دوستان📣" },
     ],
     [
@@ -132,7 +132,7 @@ const setAdminAccessLevel = (user_id, promote) => {
     keyboard.row(
       {
         text: promote[trimCan] === true ? "✅" : "❌",
-        callback_data: keys[ix].callback_data,
+        callback_data: keys[i].callback_data,
       },
       { ...keys[i] }
     );

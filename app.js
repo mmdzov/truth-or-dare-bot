@@ -157,7 +157,7 @@ bot.command("start", async (ctx, next) => {
     if (result?.joined === true) {
       ctx.reply(`شما وارد بازی شدید`, {
         reply_markup: {
-          keyboard: newGameAdminKeyboard().keyboard,
+          keyboard: newGameAdminKeyboard(result.match).keyboard,
           resize_keyboard: true,
         },
       });
@@ -360,9 +360,8 @@ bot.hears("لغو و بازگشت", async (ctx, next) => {
   return next();
 });
 
-bot.hears("بازیکنان آماده👥", async (ctx, next) => {
+bot.hears("بازیکنان👥", async (ctx, next) => {
   await friendship.readyPlayers(ctx);
-
   return next();
 });
 
@@ -419,8 +418,8 @@ bot.hears("بازگشت", async (ctx, next) => {
       reply_markup: {
         keyboard:
           +_match.owner === ctx.from.id
-            ? newGameFriendshipKeyboard(_match.mode).keyboard
-            : newGameAdminKeyboard(getUser.admin, _match.mode).keyboard,
+            ? newGameFriendshipKeyboard(_match.started, _match.mode).keyboard
+            : newGameAdminKeyboard(_match, getUser.admin, _match.mode).keyboard,
         resize_keyboard: true,
       },
     });

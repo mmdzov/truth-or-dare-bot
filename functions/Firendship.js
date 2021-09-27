@@ -24,6 +24,7 @@ const {
   openPublicMatch,
   getMatchLimits,
   checkPlayerAdmin,
+  startGame,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 
@@ -285,8 +286,11 @@ ${datas[index].title} برای شما ${
         }`,
         {
           reply_markup: {
-            keyboard: newGameAdminKeyboard(result.admin, result.match.mode)
-              .keyboard,
+            keyboard: newGameAdminKeyboard(
+              result.match,
+              result.admin,
+              result.match.mode
+            ).keyboard,
             resize_keyboard: true,
           },
         }
@@ -356,8 +360,9 @@ ${datas[index].title} برای شما ${
             {
               reply_markup: {
                 keyboard: item.isOwner
-                  ? newGameFriendshipKeyboard(result.mode).keyboard
-                  : newGameAdminKeyboard(item.admin, result.mode).keyboard,
+                  ? newGameFriendshipKeyboard(result, result.mode).keyboard
+                  : newGameAdminKeyboard(result, item.admin, result.mode)
+                      .keyboard,
                 resize_keyboard: true,
               },
             }
@@ -597,7 +602,7 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
         "📝جزئیات بازی",
         "🚷ترک بازی",
         "بازگشت",
-        "بازیکنان آماده👥",
+        "بازیکنان👥",
         "شروع بازی🎮",
         "گفتگو💬",
         "اطلاع به دوستان📣",
@@ -642,6 +647,7 @@ ${ctx.message.text}`
       ctx.reply("منوی محدودیت بازی", {
         reply_markup: { inline_keyboard: limitKeyboard.inline_keyboard },
       });
+      return next();
     });
 
     //! set limit game
@@ -649,7 +655,7 @@ ${ctx.message.text}`
       if (!ctx.callbackQuery.data.includes("limit-game-")) return next();
       const match = await findFriendMatch(ctx.from.id);
       let res = await checkPlayerAdmin(match._id, ctx.from.id);
-      if (!res) return next();
+      if (!res || !res.admin.read_write_limits) return next();
       if (!match) return next();
       let data = ctx.callbackQuery.data;
       data = data.split("limit-game-");
@@ -662,6 +668,36 @@ ${ctx.message.text}`
           inline_keyboard: limitKeyboard.inline_keyboard,
         },
       });
+      return next();
+    });
+
+    bot.hears("شروع بازی🎮", async (ctx, next) => {
+      let result = await startGame(ctx.from.id);
+      if (!result) return next();
+
+      result.players.map((item) => {
+        if (item.id !== ctx.from.id) {
+          bot.api.sendMessage(
+            item.id,
+            `بازی توسط ${ctx.from.first_name} شروع شد`,
+            {
+              reply_markup: {
+                keyboard: newGameAdminKeyboard(result, item.admin, result.mode)
+                  .keyboard,
+                resize_keyboard: true,
+              },
+            }
+          );
+        } else {
+          ctx.reply(`بازی توسط شما شروع شد`, {
+            reply_markup: {
+              keyboard: newGameFriendshipKeyboard(result, result.mode).keyboard,
+              resize_keyboard: true,
+            },
+          });
+        }
+      });
+
       return next();
     });
   }

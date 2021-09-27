@@ -237,7 +237,24 @@ class FriendsMatchModel {
       if (player.admin.isAdmin || player.isOwner) {
         return player;
       }
-      return false
+      return false;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async startGame(user_id) {
+    const ff = new FriendsMatchModel();
+    try {
+      const match = await ff.findFriendMatch(user_id);
+      let result = await ff.checkPlayerAdmin(match._id, user_id);
+      // if (!result || match.started) return false; //!default enabled
+      await friendsMatch.findOneAndUpdate(
+        { _id: match._id },
+        { started: true },
+        { new: true }
+      );
+      return match;
     } catch (e) {
       console.log(e);
     }
@@ -279,7 +296,7 @@ class FriendsMatchModel {
         { secret_link: match_link },
         { players: match.players, turn: match.turn }
       );
-      return { players: match.players, joined: true };
+      return { players: match.players, joined: true, match };
     } catch (e) {
       console.log(e);
     }
