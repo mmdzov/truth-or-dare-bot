@@ -19,6 +19,7 @@ const {
   hasOwnerPlayer,
   removePlayer,
   createModifyLink,
+  changeLimitStatus,
   getPublicMatchs,
   openPublicMatch,
   getMatchLimits,
@@ -650,10 +651,15 @@ ${ctx.message.text}`
       let data = ctx.callbackQuery.data;
       data = data.split("limit-game-");
       data = data.filter((item) => item !== "").join("");
-      data = data.split(" ");
-            //! working....
-
-      return next()
+      data = data.split(" ")[0];
+      let result = await changeLimitStatus(match, data);
+      let limitKeyboard = limitGameMenuKeyboard(match.match_id, result.limits);
+      ctx.editMessageReplyMarkup({
+        reply_markup: {
+          inline_keyboard: limitKeyboard.inline_keyboard,
+        },
+      });
+      return next();
     });
   }
 }

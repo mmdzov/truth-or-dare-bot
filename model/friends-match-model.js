@@ -63,6 +63,24 @@ class FriendsMatchModel {
     }
   }
 
+  async changeLimitStatus(match, key) {
+    try {
+      let index = match.limits.findIndex((item) => item.name === key);
+      match.limits[index].enabled = !match.limits[index].enabled;
+
+      let result = await friendsMatch.findOneAndUpdate(
+        { _id: match._id },
+        { limits: match.limits },
+        {
+          new: true,
+        }
+      );
+      return result;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async deleteMatch(user_id) {
     try {
       const owner = await friendsMatch.findOne({ owner: user_id });
