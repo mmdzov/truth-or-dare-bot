@@ -779,6 +779,8 @@ ${ctx.message.text}`
       let sessionTo = storage.read(to.id);
       sessionTo.friend_gmae.chat = chatDisable;
       storage.write(to.id, sessionTo);
+
+      //! IMPORTANT
       bot.api.sendMessage(
         to.id,
         `
@@ -786,7 +788,8 @@ ${ctx.message.text}`
 حالا یکی رو انتخاب کن`,
         {
           reply_markup: {
-            keyboard: new Keyboard().text("").row().text(""),
+            keyboard: new Keyboard().text("").row().text("").keyboard,
+            resize_keyboard: true,
           },
         }
       );

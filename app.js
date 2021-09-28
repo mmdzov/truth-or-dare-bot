@@ -432,6 +432,10 @@ bot.hears("افزودن دوست", (ctx, next) => {
 
 bot.hears("بازگشت", async (ctx, next) => {
   const match = await findMatch(ctx.from.id);
+  ctx.session.friend_game.new_game_select_name = {
+    name: "",
+    select: false,
+  };
   if (ctx.session?.friend_game?.chat?.chat) {
     const _match = await findFriendMatch(ctx.from.id);
     const getUser = _match.players.filter((item) => item.id === ctx.from.id)[0];
