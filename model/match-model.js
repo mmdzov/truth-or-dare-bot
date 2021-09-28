@@ -211,7 +211,7 @@ class MatchModel {
       if (player[index + 1]) {
         player[index + 1].turn = true;
       } else player[0].turn = true;
-      //* check beshe! age user montakhab capacity === 0 dasht byd nobat be nafar baadi bere
+      //! check beshe! age user montakhab capacity === 0 dasht byd nobat be nafar baadi bere
 
       let selectTarget =
         player.length === 2

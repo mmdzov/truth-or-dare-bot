@@ -22,7 +22,7 @@ class UserModel {
   async addUserFriend(user_id, target_id) {
     let player = await user.findOne({ user_id });
     if (user_id === target_id) return { isEqual: true };
-    if (!player.friends) player.friends = [];
+    if (!player?.friends) player.friends = [];
     if (player.friends?.includes(target_id)) return { isExist: true };
     let target_player = await user.findOne({ user_id: target_id });
     if (!target_player) return { not_found: true };

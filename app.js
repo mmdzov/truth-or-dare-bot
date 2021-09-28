@@ -139,7 +139,7 @@ bot.use(
 
 const friendship = new Friendship();
 
-friendship.exec();
+friendship.exec(storage);
 
 bot.command("start", async (ctx, next) => {
   await newuser({
@@ -163,12 +163,33 @@ bot.command("start", async (ctx, next) => {
       });
       result?.players.map((item) => {
         if (item.id === ctx.from.id) return;
+        if (result?.match?.started && result.players.length === 2) {
+          bot.api.sendMessage(
+            result.match.turn.from.id,
+            `قرار است ${result.match.turn.to.first_name} را به چالش بکشید
+حالا روی دکمه ی بپرس بزن تا شجاعت یا حقیقت رو انتخاب کنه`,
+            {
+              reply_markup: {
+                keyboard: newGameFriendshipKeyboard(
+                  result?.match,
+                  result?.match?.mode,
+                  true
+                ).keyboard,
+                resize_keyboard: true,
+              },
+            }
+          );
+          ctx.reply(
+            `شما شرکت کننده دوم در این بازی هستی صبر کن تا بازیکن ${result.match.turn.from.first_name} ازت بپرسه شجاعت یا حقیقت`
+          );
+        }
+
         if (!item.isOwner) {
           bot.api
             .sendMessage(
               item.id,
               `
-  کاربر جدید ${ctx.from.first_name} وارد بازی شد`
+کاربر جدید ${ctx.from.first_name} وارد بازی شد`
               // {
               //   reply_markup: {
               //     inline_keyboard: newPlayerInlineSetting(
@@ -199,7 +220,7 @@ bot.command("start", async (ctx, next) => {
         }
       });
     }
-    return;
+    return next();
   }
 
   let refferId = +ctx.match.match(/[0-9]/g)?.join("");
@@ -418,7 +439,11 @@ bot.hears("بازگشت", async (ctx, next) => {
       reply_markup: {
         keyboard:
           +_match.owner === ctx.from.id
-            ? newGameFriendshipKeyboard(_match.started, _match.mode).keyboard
+            ? newGameFriendshipKeyboard(
+                _match,
+                _match.mode,
+                _match.turn.from.id === ctx.from.id
+              ).keyboard
             : newGameAdminKeyboard(_match, getUser.admin, _match.mode).keyboard,
         resize_keyboard: true,
       },

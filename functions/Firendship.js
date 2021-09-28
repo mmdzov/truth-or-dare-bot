@@ -162,7 +162,7 @@ class Friendship {
     return keyboard;
   }
 
-  exec() {
+  exec(storage) {
     //! handle promote player
     bot.on("callback_query:data", async (ctx, next) => {
       const promote_data = ctx.callbackQuery.data;
@@ -360,8 +360,12 @@ ${datas[index].title} برای شما ${
             {
               reply_markup: {
                 keyboard: item.isOwner
-                  ? newGameFriendshipKeyboard(result, result.mode).keyboard
-                  : newGameAdminKeyboard(result, item.admin, result.mode)
+                  ? newGameFriendshipKeyboard(
+                      result.match,
+                      result.mode,
+                      result.match.turn.from.id === ctx.from.id
+                    ).keyboard
+                  : newGameAdminKeyboard(result.match, item.admin, result.mode)
                       .keyboard,
                 resize_keyboard: true,
               },
@@ -526,21 +530,43 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
         });
         return next();
       }
+
       if (result?.joined === true) {
         ctx.reply(`شما وارد بازی شدید`, {
           reply_markup: {
-            keyboard: newGameAdminKeyboard().keyboard,
+            keyboard: newGameAdminKeyboard(result.match).keyboard,
             resize_keyboard: true,
           },
         });
         result?.players.map((item) => {
           if (item.id === ctx.from.id) return;
+          if (result?.match?.started && result.players.length === 2) {
+            bot.api.sendMessage(
+              result.match.turn.from.id,
+              `قرار است ${result.match.turn.to.first_name} را به چالش بکشید
+حالا روی دکمه ی بپرس بزن تا شجاعت یا حقیقت رو انتخاب کنه`,
+              {
+                reply_markup: {
+                  keyboard: newGameFriendshipKeyboard(
+                    result?.match,
+                    result?.match?.mode,
+                    true
+                  ).keyboard,
+                  resize_keyboard: true,
+                },
+              }
+            );
+            ctx.reply(
+              `شما شرکت کننده دوم در این بازی هستی صبر کن تا بازیکن ${result.match.turn.from.first_name} ازت بپرسه شجاعت یا حقیقت`
+            );
+          }
+
           if (!item.isOwner) {
             bot.api
               .sendMessage(
                 item.id,
                 `
-    کاربر جدید ${ctx.from.first_name} وارد بازی شد`
+کاربر جدید ${ctx.from.first_name} وارد بازی شد`
                 // {
                 //   reply_markup: {
                 //     inline_keyboard: newPlayerInlineSetting(
@@ -606,12 +632,14 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
         "شروع بازی🎮",
         "گفتگو💬",
         "اطلاع به دوستان📣",
+        "محدودیت بازی📝",
         "ایجاد/تغییر لینک اختصاصی🔏",
         "ایجاد/تغییر لینک سریع🔏",
         "محدودیت بازی📝",
         "دریافت لینک بازی🗳",
         "لغو و بازگشت",
         "شخصی کردن بازی🔑",
+        "بپرس🗣",
         "عمومی کردن بازی🌍",
       ];
       if (ignore_keyboards.includes(ctx.message.text)) return next();
@@ -671,6 +699,7 @@ ${ctx.message.text}`
       return next();
     });
 
+    //! start game
     bot.hears("شروع بازی🎮", async (ctx, next) => {
       let result = await startGame(ctx.from.id);
       if (!result) return next();
@@ -689,16 +718,78 @@ ${ctx.message.text}`
             }
           );
         } else {
-          ctx.reply(`بازی توسط شما شروع شد`, {
-            reply_markup: {
-              keyboard: newGameFriendshipKeyboard(result, result.mode).keyboard,
-              resize_keyboard: true,
-            },
-          });
+          if (!result?.turn?.to) {
+            ctx.reply(
+              `بازی توسط شما شروع شد
+درحال حاظر جز شما بازیکن دیگری در بازی نیست
+اگر در بازی دوستی دارید بر روی اطلاع به دوستان بزنید تا دوستان شما وارد بازی شوند همچنین می توانید برای بازی خود لینک ایجاد کنید و آن را برای دوستانتان بفرستید تا در بازی شما مشارکت داشته باشند و تجربه بازی خوبی رو داشته باشید.
+همچنین می توانید بازی خود را عمومی کنید و منتظر بمانید تا دیگر بازیکنان به بازی شما بپیوندند`,
+              {
+                reply_markup: {
+                  keyboard: newGameFriendshipKeyboard(
+                    result,
+                    result.mode,
+                    false
+                  ).keyboard,
+                  resize_keyboard: true,
+                },
+              }
+            );
+          } else {
+            ctx.reply(
+              `بازی توسط شما شروع شد و قرار است ${result.turn.to.first_name} را به چالش بکشید 
+  حالا روی دکمه ی بپرس بزن تا شجاعت یا حقیقت رو انتخاب کنه`,
+              {
+                reply_markup: {
+                  keyboard: newGameFriendshipKeyboard(result, result.mode, true)
+                    .keyboard,
+                  resize_keyboard: true,
+                },
+              }
+            );
+          }
+        }
+      });
+      if (!result?.turn?.to) return next();
+      bot.api.sendMessage(
+        result.turn.to.id,
+        `
+قراره ${result.turn.from.first_name} تو رو به چالش بکشونه منتظر باش ازت بپرسه شجاعت یا حقیقت`
+      );
+
+      result.players.map((item) => {
+        if (item.id !== result.turn.from.id && item.id !== result.turn.to.id) {
+          ctx.reply(
+            `قراره که ${result.turn.from.first_name} از ${result.turn.to.first_name} بپرسه شجاعت یا حقیقت`
+          );
         }
       });
 
       return next();
+    });
+
+    //! ask button
+    bot.hears("بپرس🗣", async (ctx, next) => {
+      const match = await findFriendMatch(ctx.from.id);
+      if (!match || match?.turn?.from?.id !== ctx.from.id || !match?.turn?.to)
+        return next();
+      const { from, to } = match.turn;
+      let chatDisable = { hasTurn: false, chat: false };
+      ctx.session.friend_game.chat = chatDisable;
+      let sessionTo = storage.read(to.id);
+      sessionTo.friend_gmae.chat = chatDisable;
+      storage.write(to.id, sessionTo);
+      bot.api.sendMessage(
+        to.id,
+        `
+خب... ${match.turn.from.first_name} ازت پرسید
+حالا یکی رو انتخاب کن`,
+        {
+          reply_markup: {
+            keyboard: new Keyboard().text("").row().text(""),
+          },
+        }
+      );
     });
   }
 }

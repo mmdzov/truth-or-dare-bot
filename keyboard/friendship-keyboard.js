@@ -8,8 +8,13 @@ const mainFriendshipKeyboard = new Keyboard()
   .row()
   .text("بازگشت");
 
-const newGameFriendshipKeyboard = (match = {}, mode = "private") => {
+const newGameFriendshipKeyboard = (
+  match = {},
+  mode = "private",
+  isMe = false
+) => {
   return new Keyboard()
+    .row(isMe ? "بپرس🗣" : "")
     .text("بازیکنان👥")
     .text(match.started ? "" : "شروع بازی🎮")
     .row()
@@ -32,7 +37,7 @@ const newGameAdminKeyboard = (match, promoteData = {}, mode = "") => {
   let keyboard = new Keyboard().text("بازیکنان👥").text("گفتگو💬");
   let datas = [
     [
-      match.started ? {} : { name: "start_game", title: "شروع بازی🎮" },
+      match?.started ? {} : { name: "start_game", title: "شروع بازی🎮" },
       { name: "notify_friends", title: "اطلاع به دوستان📣" },
     ],
     [

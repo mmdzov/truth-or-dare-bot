@@ -157,11 +157,17 @@ class FriendsMatchModel {
     );
     if (!access) return false;
     const newMode = access.match.mode === "private" ? "public" : "private";
-    await friendsMatch.findOneAndUpdate(
+    let result = await friendsMatch.findOneAndUpdate(
       { _id: access.match._id },
-      { mode: newMode }
+      { mode: newMode },
+      { new: true }
     );
-    return { mode: newMode, access, isOwner: +access.match.owner === user_id };
+    return {
+      mode: newMode,
+      access,
+      isOwner: +access.match.owner === user_id,
+      match: result,
+    };
   }
 
   async getAllPlayers(match_link, user_id) {
@@ -292,15 +298,19 @@ class FriendsMatchModel {
           read_write_limits: false,
         },
       });
+
       let result = await friendsMatch.findOneAndUpdate(
         { secret_link: match_link },
-        { players: match.players, turn: match.turn }
+        { players: match.players, turn: match.turn },
+        { new: true }
       );
       return { players: match.players, joined: true, match };
     } catch (e) {
       console.log(e);
     }
   }
+
+  // async
 }
 
 module.exports = new FriendsMatchModel();
