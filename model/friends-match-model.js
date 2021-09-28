@@ -309,8 +309,6 @@ class FriendsMatchModel {
       console.log(e);
     }
   }
-
-  // async
 }
 
 module.exports = new FriendsMatchModel();

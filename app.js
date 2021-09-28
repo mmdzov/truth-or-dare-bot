@@ -38,6 +38,7 @@ const {
   visibleUserProfile,
   selectGenderUser,
   addUserFriend,
+  getUserFriends,
 } = require("./model/user-model");
 const general = new General();
 const mtp = new Multiplayer();
@@ -262,6 +263,34 @@ bot.hears("بازی جدید🎮", async (ctx, next) => {
       resize_keyboard: true,
     },
   });
+});
+
+bot.hears("دوستان من👨‍👧‍👦", async (ctx, next) => {
+  const result = await getUserFriends(ctx.from.id);
+  if (result.length === 0) {
+    ctx.reply(`هنوز دوستی ندارید`);
+    return next();
+  }
+
+  let keyboard = new InlineKeyboard();
+
+  for (let i = 0; i < result.length; i++) {
+    let user = await bot.api.getChat(result[i]);
+    keyboard.row(
+      { 
+        text: user.first_name, callback_data: "friend-username" },
+      { text: "💭", callback_data: `friend-chat-user ${user.id}` },
+      { text: "🗑", callback_data: `friend-delete-user ${user.id}` }
+    );
+  }
+
+  ctx.reply(`لیست دوستان شما`, {
+    reply_markup: {
+      inline_keyboard: keyboard.inline_keyboard,
+    },
+  });
+
+  return next();
 });
 
 bot.on("message", async (ctx, next) => {

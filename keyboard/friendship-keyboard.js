@@ -1,8 +1,8 @@
 const { Keyboard, InlineKeyboard } = require("grammy");
 
 const mainFriendshipKeyboard = new Keyboard()
-  .text("بازی جدید🎮")
   .text("دوستان من👨‍👧‍👦")
+  .text("بازی جدید🎮")
   .row()
   .text("ورود به بازی🚪")
   .text("افزودن دوست➕")
