@@ -305,10 +305,7 @@ ${datas[index].title} برای شما ${
       let friends = await getUserFriends(ctx.from.id);
       friends = friends.filter(
         (item) =>
-          access.match.players
-            .map((_) => (item !== ctx.from.id && _.id ? item : undefined))
-            .filter((item) => item)
-            .includes(item) === false
+          access.match.players.some((_) => _.id === item) === false && item
       );
       if (friends.length === 0) {
         ctx.reply(`
