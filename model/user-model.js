@@ -37,6 +37,27 @@ class UserModel {
     return true;
   }
 
+  async removeFriend(user_id, friend_id) {
+    try {
+      const getUser = await user.findOne({ user_id });
+      const getTarget = await user.findOne({ user_id: friend_id });
+      const friends = getUser.friends.filter((item) => item !== friend_id);
+      const targetFriends = getTarget.friends.filter(
+        (item) => item !== user_id
+      );
+      if (!getUser.friends.filter((item) => item === friend_id)[0])
+        return { not_exist: true };
+      await user.findOneAndUpdate({ user_id }, { friends });
+      await user.findOneAndUpdate(
+        { user_id: friend_id },
+        { friends: targetFriends }
+      );
+      return { user_id, friend_id };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async visibleUserProfile(user_id) {
     try {
       let { visible_profile } = await new UserModel().viewUserSetting(user_id);

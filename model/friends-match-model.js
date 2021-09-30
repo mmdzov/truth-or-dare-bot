@@ -1,5 +1,8 @@
+const { InlineKeyboard } = require("grammy");
 const { customAlphabet } = require("nanoid");
+const bot = require("../config/require");
 const friendsMatch = require("../schema/friends-match-schema");
+const { getUserFriends } = require("./user-model");
 
 class FriendsMatchModel {
   async newMatch(data) {
@@ -264,6 +267,26 @@ class FriendsMatchModel {
     } catch (e) {
       console.log(e);
     }
+  }
+
+  async getMyFriends(user_id) {
+    const result = await getUserFriends(user_id);
+    if (result.length === 0) return { not_exist: true };
+
+    let keyboard = new InlineKeyboard();
+
+    for (let i = 0; i < result.length; i++) {
+      let user = await bot.api.getChat(result[i]);
+      keyboard.row(
+        {
+          text: user.first_name,
+          callback_data: "friend-username",
+        },
+        // { text: "💭", callback_data: `friend-chat-user ${user.id}` },
+        { text: "🗑", callback_data: `friend-delete-user ${user.id}` }
+      );
+    }
+    return { keyboard };
   }
 
   async joinUserToFriendMatch(match_link, user = {}) {

@@ -39,6 +39,7 @@ const {
   selectGenderUser,
   addUserFriend,
   getUserFriends,
+  removeFriend,
 } = require("./model/user-model");
 const general = new General();
 const mtp = new Multiplayer();
@@ -57,6 +58,7 @@ const {
   getAllPlayers,
   joinUserToFriendMatch,
   findFriendMatch,
+  getMyFriends,
 } = require("./model/friends-match-model");
 const Friendship = require("./functions/firendship");
 
@@ -266,32 +268,76 @@ bot.hears("بازی جدید🎮", async (ctx, next) => {
 });
 
 bot.hears("دوستان من👨‍👧‍👦", async (ctx, next) => {
-  const result = await getUserFriends(ctx.from.id);
-  if (result.length === 0) {
+  const result = await getMyFriends(ctx.from.id);
+  if (result?.not_exist) {
     ctx.reply(`هنوز دوستی ندارید`);
     return next();
   }
 
-  let keyboard = new InlineKeyboard();
+  ctx.reply(
+    `لیست دوستان شما
 
-  for (let i = 0; i < result.length; i++) {
-    let user = await bot.api.getChat(result[i]);
-    keyboard.row(
-      { 
-        text: user.first_name, callback_data: "friend-username" },
-      { text: "💭", callback_data: `friend-chat-user ${user.id}` },
-      { text: "🗑", callback_data: `friend-delete-user ${user.id}` }
-    );
-  }
-
-  ctx.reply(`لیست دوستان شما`, {
-    reply_markup: {
-      inline_keyboard: keyboard.inline_keyboard,
-    },
-  });
+توجه: در حذف دوستان خود دقت کنید به محض اینکه روی دکمه ی سطل زدید دوستتان حذف میشود`,
+    {
+      reply_markup: {
+        inline_keyboard: result.keyboard.inline_keyboard,
+      },
+    }
+  );
 
   return next();
 });
+
+bot.on("callback_query:data", async (ctx, next) => {
+  if (!ctx.callbackQuery.data.includes("friend-delete-user")) return next();
+  const target = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
+  let result = await removeFriend(ctx.from.id, target);
+  let userChat = await bot.api.getChat(target);
+
+  if (result?.not_exist) {
+    ctx.answerCallbackQuery({
+      text: `شخص ${userChat.first_name} قبلا از لیست دوستات حذف کردی`,
+    });
+    return next();
+  }
+
+  if (result?.user_id) {
+    ctx.answerCallbackQuery({
+      text: `شخص ${userChat.first_name} از لیست دوستات حذف شد`,
+    });
+
+    bot.api.sendMessage(
+      target,
+      `شخص ${ctx.from.first_name} تو رو از لیست دوستاش حذف کرد`
+    );
+
+    const myFriendsResult = await getMyFriends(ctx.from.id);
+    if (myFriendsResult?.not_exist) {
+      ctx.answerCallbackQuery({
+        text: "دیگر دوستی ندارید",
+      });
+      ctx.deleteMessage();
+      return next();
+    }
+
+    ctx.editMessageReplyMarkup({
+      reply_markup: {
+        inline_keyboard: myFriendsResult.keyboard.inline_keyboard,
+      },
+    });
+    return next();
+  }
+
+  ctx.answerCallbackQuery({
+    text: `ای وای! مشکلی پیش اومده لطفا بعدا دوباره امتحان کن`,
+  });
+  return next();
+});
+
+// bot.on("callback_query:data", (ctx, next) => {
+// if (!ctx.callbackQuery.data.includes("friend-chat-user")) return next();
+
+// });
 
 bot.on("message", async (ctx, next) => {
   if (
