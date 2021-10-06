@@ -9,6 +9,7 @@ const {
   limitGameMenuKeyboard,
 } = require("../keyboard/friendship-keyboard");
 const mainKeyboard = require("../keyboard/main-keyboard");
+const { inviteToGameQuestion } = require("../keyboard/question");
 const friendsMatchModel = require("../model/friends-match-model");
 const {
   getAllPlayers,
@@ -25,8 +26,11 @@ const {
   getMatchLimits,
   checkPlayerAdmin,
   startGame,
+  checkUserInGame,
+  joinUserToFriendMatch,
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
+const joinGame = require("../utils/joinGame");
 
 class Friendship {
   async readyPlayers(ctx, editMode = false) {
@@ -327,7 +331,7 @@ ${datas[index].title} برای شما ${
         let userChat = await bot.api.getChat(friends[i]);
         users.push({
           callback_data: `submit_notify_friend ${userChat.id}`,
-          text: userChat.first_name,
+          text: userChat?.first_name ?? "",
         });
       }
 
@@ -340,6 +344,103 @@ ${datas[index].title} برای شما ${
           inline_keyboard: keyboard.inline_keyboard,
         },
       });
+      return next();
+    });
+
+    //! submit notify friends
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("submit_notify_friend"))
+        return next();
+      if (ctx.callbackQuery.data.includes("ALL")) {
+        //! send request to all user friends
+        let friends = await getUserFriends(ctx.from.id);
+        if (friends?.length === 0) return next();
+        let friendFiltered = [];
+        for (let i = 0; i < friends?.length; i++) {
+          let result = await checkUserInGame(friends[i]);
+          if (!result?.user_in_game) {
+            friendFiltered.push(item);
+          }
+        }
+
+        if (friendFiltered.length === 0) {
+          ctx.answerCallbackQuery({
+            text: `دوستانت همگی مشغول بازی هستند`,
+          });
+          return next();
+        }
+
+        if (friendFiltered.length === 1) {
+          ctx.answerCallbackQuery({
+            text: "پیغام دعوت برای دوستت ارسال شد",
+          });
+        }
+
+        ctx.answerCallbackQuery({
+          text: "پیغام دعوت برای دوستانت ارسال شد",
+        });
+
+        return next();
+      }
+      const userId = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
+
+      //! check user in game
+      let result = await checkUserInGame(userId);
+      if (result?.user_in_game) {
+        ctx.answerCallbackQuery({
+          text: `درحال حاظر دوست شما در بازی دیگری است`,
+        });
+        return next();
+      }
+      //! end check user in game
+
+      bot.api.sendMessage(
+        userId,
+        `دوستت ${ctx.from.first_name} تو رو به بازی دعوت کرده`,
+        {
+          reply_markup: {
+            inline_keyboard: inviteToGameQuestion(userId).inline_keyboard,
+          },
+        }
+      );
+
+      ctx.answerCallbackQuery({
+        text: `دعوت برای دوستت ارسال شد`,
+      });
+      return next();
+    });
+
+    //!submit invite game
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes(`accept_invite_join_game`))
+        return next();
+      const userId = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
+      let result = await checkUserInGame(ctx.from.id);
+      if (result?.user_in_game) {
+        ctx.answerCallbackQuery({
+          text: `درحال حاظر شما در یک بازی شرکت کردید`,
+        });
+        return next();
+      }
+      let fm = await findFriendMatch(userId);
+      let res = joinUserToFriendMatch(fm.secret_link, ctx.from);
+      joinGame(ctx, res);
+      return next();
+    });
+
+    //! reject invite game
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes(`reject_invite_join_game`))
+        return next();
+      const userId = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
+      await bot.api.sendMessage(
+        userId,
+        `دوستت ${ctx.from.first_name} دعوت بازی رو رد کرد`
+      );
+      await ctx.answerCallbackQuery({
+        text: "دعوت بازی توسط شما لغو شد",
+      });
+      await ctx.deleteMessage();
       return next();
     });
 

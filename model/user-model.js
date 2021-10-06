@@ -20,21 +20,25 @@ class UserModel {
   }
 
   async addUserFriend(user_id, target_id) {
-    let player = await user.findOne({ user_id });
-    if (user_id === target_id) return { isEqual: true };
-    if (!player?.friends) player.friends = [];
-    if (player.friends?.includes(target_id)) return { isExist: true };
-    let target_player = await user.findOne({ user_id: target_id });
-    if (!target_player) return { not_found: true };
-    if (!player.friends) player.friends = [];
-    target_player.friends.push(user_id);
-    player.friends.push(target_id);
-    await user.findOneAndUpdate({ user_id }, { friends: player.friends });
-    await user.findOneAndUpdate(
-      { user_id: target_id },
-      { friends: target_player.friends }
-    );
-    return true;
+    try {
+      let player = await user.findOne({ user_id });
+      if (user_id === target_id) return { isEqual: true };
+      if (!player?.friends) player.friends = [];
+      if (player.friends?.includes(target_id)) return { isExist: true };
+      let target_player = await user.findOne({ user_id: target_id });
+      if (!target_player) return { not_found: true };
+      if (!player.friends) player.friends = [];
+      target_player.friends.push(user_id);
+      player.friends.push(target_id);
+      await user.findOneAndUpdate({ user_id }, { friends: player.friends });
+      await user.findOneAndUpdate(
+        { user_id: target_id },
+        { friends: target_player.friends }
+      );
+      return true;
+    } catch (e) {
+      return { failed: true };
+    }
   }
 
   async removeFriend(user_id, friend_id) {

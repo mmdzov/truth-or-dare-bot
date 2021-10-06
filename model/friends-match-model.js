@@ -204,6 +204,15 @@ class FriendsMatchModel {
     }
   }
 
+  async checkUserInGame(user_id) {
+    try {
+      const match = await new FriendsMatchModel().findFriendMatch(user_id);
+      if (match && Object.keys(match)?.length > 0)
+        return { user_in_game: true };
+      return false;
+    } catch (e) {}
+  }
+
   async changePlayerAccess(user_id, access_key) {
     try {
       const getMatchs = await friendsMatch.find({});
