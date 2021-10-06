@@ -393,13 +393,12 @@ ${datas[index].title} برای شما ${
         return next();
       }
       //! end check user in game
-
       bot.api.sendMessage(
         userId,
         `دوستت ${ctx.from.first_name} تو رو به بازی دعوت کرده`,
         {
           reply_markup: {
-            inline_keyboard: inviteToGameQuestion(userId).inline_keyboard,
+            inline_keyboard: inviteToGameQuestion(ctx.from.id).inline_keyboard,
           },
         }
       );
@@ -423,8 +422,9 @@ ${datas[index].title} برای شما ${
         return next();
       }
       let fm = await findFriendMatch(userId);
-      let res = joinUserToFriendMatch(fm.secret_link, ctx.from);
-      joinGame(ctx, res);
+      let res = await joinUserToFriendMatch(fm.secret_link, ctx.from);
+      await joinGame(ctx, res);
+      ctx.deleteMessage();
       return next();
     });
 
