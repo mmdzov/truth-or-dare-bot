@@ -188,8 +188,13 @@ bot.command("start", async (ctx, next) => {
 });
 
 bot.hears("بازی جدید🎮", async (ctx, next) => {
-  const match = await findMatch(ctx.from.id);
-  if (match) return next();
+  const result = await findFriendMatch(ctx.from.id);
+  if (result) {
+    ctx.reply(
+      "درحال حاظر شما در یک بازی شرکت کرده اید اگر نمی توانید به منوی بازی برگردید بر روی /comeback یک بار بزنید"
+    );
+    return next();
+  }
   ctx.session.friend_game.new_game_select_name = {
     name: "",
     select: true,

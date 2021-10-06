@@ -173,7 +173,7 @@ class Friendship {
       if (!promote_data.includes("promotePlayer_friendship")) return next();
       const user_id = +promote_data.match(/[0-9]/g).join("");
       let result = await findFriendMatch(ctx.from.id);
-      if (!result) return;
+      if (!result) return next();
       ctx.session.friend_game.promote.user_id = user_id;
       let user = await bot.api.getChat(user_id);
       let player = result.players.filter((item) => item.id === user_id)[0];
@@ -563,7 +563,12 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
     //!open game
     bot.hears("ورود به بازی🚪", async (ctx, next) => {
       const result = await findFriendMatch(ctx.from.id);
-      if (result) return next();
+      if (result) {
+        ctx.reply(
+          "درحال حاظر شما در یک بازی شرکت کرده اید اگر نمی توانید به منوی بازی برگردید بر روی /comeback یک بار بزنید"
+        );
+        return next();
+      }
       const keyboard = await this.openGameList(ctx);
       if (keyboard?.not_exist) {
         ctx.reply("هنوز بازی در دسترس نیست");
