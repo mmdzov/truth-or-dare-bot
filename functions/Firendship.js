@@ -755,7 +755,11 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
 ${ctx.message.text}`
         );
       });
-      ctx.reply("پیام شما برای تمام بازیکنان ارسال شد");
+      ctx.reply("پیام شما برای تمام بازیکنان ارسال شد").then((res) => {
+        setTimeout(() => {
+          bot.api.deleteMessage(res.message_id);
+        }, 1500);
+      });
       return next();
     });
 
