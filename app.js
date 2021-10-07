@@ -62,6 +62,7 @@ const {
 } = require("./model/friends-match-model");
 const Friendship = require("./functions/firendship");
 const joinGame = require("./utils/joinGame");
+const defaultSession = require("./session");
 
 bot.use(hydrateContext());
 bot.api.config.use(hydrateApi());
@@ -71,71 +72,7 @@ bot.use(
     storage,
     initial() {
       return {
-        friend_game: {
-          new_game: true, //! default false
-          change_link: false,
-          page: {
-            index: 0,
-          },
-          chat: {
-            hasTurn: false,
-            chat: false,
-          }, //! default false
-          new_game_select_name: {},
-          promote: {
-            user_id: 1820867140, //! default 0
-            isAdmin: false,
-            notify_friends: false,
-            start_game: false,
-            change_game_mode: false,
-            change_link: false,
-            get_link: false,
-            add_new_admin: false,
-            remove_player: false,
-            read_write_limits: false,
-            limit_player: false,
-          },
-        },
-        process: {
-          players_chat: false,
-          player_chat: false,
-          report_player: false,
-          report_game: false,
-          leave_game: false,
-        },
-        select: undefined,
-        waitForAddFriend: false,
-        selectGender: false,
-        chat: {
-          hasTurn: false,
-          chat: false,
-        },
-        privateChat: {},
-        waitForFindPlayer: false,
-        selectTargetGender: false,
-        findPlayer: false,
-        report_message: {},
-        player: {
-          report: false,
-          report_message: {},
-          inGame: false,
-          truthOrDare: {
-            truth: false,
-            dare: false,
-          },
-          leave_game: false,
-          chat: false,
-          count_players: 0,
-          limitInPerTurn: 0,
-          sended: false,
-        },
-        otherPlayer: {
-          truthOrDare: {
-            truth: false,
-            dare: false,
-          },
-          done: false,
-        },
+        ...defaultSession,
       };
     },
   })
@@ -1297,9 +1234,19 @@ bot.on("callback_query:data", (ctx, next) => {
 bot.command("comeback", async (ctx, next) => {
   //! working...
   const match = await findFriendMatch(ctx.from.id);
+  ctx.session = defaultSession;
   if (!match) {
-    const match = findMatch(ctx.from.id);
-
+    const match = await findMatch(ctx.from.id);
+    if (!match) {
+      //!...
+      return next();
+    }
+    ctx.reply("به منوی بازی برگشتی", {
+      reply_markup: {
+        keyboard: matchPlayingKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
     return next();
   }
   const isMe = match.turn.from.id === ctx.from.id;

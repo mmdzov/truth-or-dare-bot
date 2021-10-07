@@ -16,7 +16,8 @@ class General {
   async chat(ctx) {
     if (
       !ctx.session.player.chat ||
-      ctx.message.text.includes("گفتگو با بازیکن")
+      ctx.message.text.includes("گفتگو با بازیکن") ||
+      ctx.message.text.split("")[0] === "/"
     )
       return;
     let user_id_players = await findMatch(ctx.from.id);
@@ -49,9 +50,17 @@ class General {
         );
       }
     });
-    bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
-      text: "پیام شما به تمام بازیکنان ارسال شد",
-    });
+    if (!ctx.callbackQuery?.id) {
+      ctx.reply("پیام شما ارسال شد").then((res) => {
+        // setTimeout(() => {
+        //   bot.api.deleteMessage(res.chat.id, res.message_id);
+        // }, 1500);
+      });
+    } else {
+      bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
+        text: "پیام شما ارسال شد",
+      });
+    }
   }
 
   async callbackQueryData(ctx) {
