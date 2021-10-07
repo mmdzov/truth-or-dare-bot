@@ -1,6 +1,7 @@
 const { InlineKeyboard } = require("grammy");
 const bot = require("../config/require");
 const mainKeyboard = require("../keyboard/main-keyboard");
+const { findFriendMatch } = require("../model/friends-match-model");
 const {
   findMatch,
   hiddenMesssagePlayer,
@@ -291,6 +292,14 @@ class General {
         storage.write(question.to.id + "", sessions);
       }
     }
+  }
+
+  async findMatchExist(ctx) {
+    const onlineMatch = await findMatch(ctx.from.id);
+    if (onlineMatch) return { online: true, match: onlineMatch, isTrue: true };
+    const friendlyMatch = await findFriendMatch(ctx.from.id);
+    if (friendlyMatch)
+      return { friendly: true, match: friendlyMatch, isTrue: true };
   }
 }
 

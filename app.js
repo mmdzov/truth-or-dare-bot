@@ -1280,7 +1280,14 @@ bot.hears("🚷ترک بازی", (ctx, next) => {
 let counts = ["2", "5", "10"];
 
 for (let i in counts) {
-  bot.hears(`${counts[i]} نفره`, (ctx, next) => {
+  bot.hears(`${counts[i]} نفره`, async (ctx, next) => {
+    let res = await general.findMatchExist(ctx);
+    if (res?.isTrue) {
+      ctx.reply(
+        "درحال حاظر شما در یک بازی شرکت کرده اید اگر نمی توانید به منوی بازی برگردید بر روی /comeback یک بار بزنید"
+      );
+      return next();
+    }
     try {
       let count = +ctx.message.text.match(/[0-9]/g)?.[0] ?? 0;
       if (count === 2) {
@@ -1308,9 +1315,7 @@ bot.on("callback_query:data", (ctx, next) => {
   return next();
 });
 
-//! working in comeback command ...
 bot.command("comeback", async (ctx, next) => {
-  //! working...
   const match = await findFriendMatch(ctx.from.id);
   ctx.session = defaultSession;
   if (!match) {
