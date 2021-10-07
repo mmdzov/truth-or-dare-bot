@@ -31,7 +31,7 @@ const {
 } = require("../model/friends-match-model");
 const { getUserFriends } = require("../model/user-model");
 const joinGame = require("../utils/joinGame");
-
+const general = require("./General");
 class Friendship {
   async readyPlayers(ctx, editMode = false) {
     let players = await getAllPlayers(null, ctx.from.id);
@@ -562,8 +562,8 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
 
     //!open game
     bot.hears("ورود به بازی🚪", async (ctx, next) => {
-      const result = await findFriendMatch(ctx.from.id);
-      if (result) {
+      let res = await new general().findMatchExist(ctx);
+      if (res?.isTrue) {
         ctx.reply(
           "درحال حاظر شما در یک بازی شرکت کرده اید اگر نمی توانید به منوی بازی برگردید بر روی /comeback یک بار بزنید"
         );

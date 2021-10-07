@@ -190,8 +190,8 @@ bot.command("start", async (ctx, next) => {
 });
 
 bot.hears("بازی جدید🎮", async (ctx, next) => {
-  const result = await findFriendMatch(ctx.from.id);
-  if (result) {
+  let res = await general.findMatchExist(ctx);
+  if (res?.isTrue) {
     ctx.reply(
       "درحال حاظر شما در یک بازی شرکت کرده اید اگر نمی توانید به منوی بازی برگردید بر روی /comeback یک بار بزنید"
     );
@@ -505,14 +505,14 @@ bot.hears("بازگشت", async (ctx, next) => {
     if (ctx.session.selectGender) {
       ctx.reply(`دستورت چیه دوست من`, {
         reply_markup: {
-          keyboard: settingKeyboard.keyboard,
+          keyboard: mainKeyboard.keyboard,
           resize_keyboard: true,
         },
       });
     } else if (match.player_numbers === 2) {
       ctx.reply(`دستورت چیه دوست من`, {
         reply_markup: {
-          keyboard: settingKeyboard.keyboard,
+          keyboard: mainKeyboard.keyboard,
           resize_keyboard: true,
         },
       });
