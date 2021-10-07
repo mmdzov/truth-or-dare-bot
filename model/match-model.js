@@ -270,14 +270,17 @@ class MatchModel {
   async changeCapacity(user_id) {
     try {
       let current_match = await new MatchModel().findMatch(user_id);
-      current_match.players[current_match - 1].capacity =
-        current_match.players[current_match - 1].capacity - 1;
-      if (current_match.players[current_match - 1].capacity <= 0) {
+      console.log(current_match);
+      current_match.players[current_match.turn - 1].capacity =
+        current_match.players[current_match.turn - 1].capacity - 1;
+
+      //! if capacity === 0 delete match
+      if (current_match.players[current_match.turn - 1].capacity <= 0) {
         await match.findOneAndDelete({ _id: current_match._id });
-        return { finished_game: true };
+        return { finished_game: true, current_match };
       }
       await match.findByIdAndUpdate(
-        { match_id: current_match.match_id },
+        { _id: current_match._id },
         { players: current_match.players }
       );
     } catch (e) {

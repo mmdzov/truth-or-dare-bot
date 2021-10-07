@@ -162,8 +162,8 @@ class DuoPlay {
     selectMatchSenderReceiver(match.receiver, match.sender);
     let res = await setAnswer(ctx.from.id, ctx.message.text);
     if (
-      res.players.filter((item) => item.answer.length > 0).length ===
-      res.players.length
+      res.players.filter((item) => item.answer && item.answer?.length > 0)
+        ?.length === res.players.length
     ) {
       await changeNextTurn(match.sender);
       await clearAnswers(ctx.from.id);

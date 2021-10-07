@@ -28,12 +28,14 @@ class QueueModel {
               capacity: 10,
               turn: true,
               done: 0,
+              answer: "",
             },
             {
               user_id: user_id,
               capacity: 10,
               turn: false,
               done: 0,
+              answer: "",
             },
           ],
           player_numbers: 2,
@@ -113,7 +115,7 @@ class QueueModel {
               return item.user_id;
             }),
             result,
-          }; //? start match and queue capacity completed
+          }; //? start match and queue capacity
         }
         let otherQueues = multiples.filter(
           (item) => item.user_id !== user_id && item.matched === ""

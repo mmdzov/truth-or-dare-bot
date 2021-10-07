@@ -105,6 +105,7 @@ class General {
     }
   }
   async duoReporPlayer(ctx) {
+    if (ctx.message.text.includes("ثبت گزارش")) return;
     if (
       ctx.session.player.report &&
       !ctx.message.text.includes("گزارش بازیکن")
@@ -119,6 +120,8 @@ class General {
     }
   }
   async duoAcceptSendReportPlayer(ctx) {
+    ctx.session.player.report = false;
+    ctx.session.player.report_message = {};
     if (
       ctx.session.player.report &&
       Object.keys(ctx.session.player.report_message).length > 0
@@ -129,6 +132,7 @@ class General {
         user.user_id,
         ctx.session.player.report_message
       );
+      console.log(result);
       if (result?.alreadyReported) {
         ctx.reply("کاربر قبلا مسدود شده");
         return;
@@ -155,9 +159,11 @@ class General {
           }
         );
       }
-      ctx.session.player.report = false;
-      ctx.session.player.report_message = {};
-    }
+    } else if (
+      ctx.session.player.report &&
+      Object.keys(ctx.session.player.report_message).length === 0
+    )
+      return false;
   }
   async leaveGame(ctx) {
     if (
