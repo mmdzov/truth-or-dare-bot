@@ -15,9 +15,9 @@ const newGameFriendshipKeyboard = (
   isMe = false
 ) => {
   return new Keyboard()
-    .row(match?.started ? isMe ? "بپرس🗣" : "": "")
+    .row(match?.started ? (isMe ? "بپرس🗣" : "") : "")
     .text("بازیکنان👥")
-    .text(match.started ? "" : "شروع بازی🎮")
+    .text(match?.started ? "" : "شروع بازی🎮")
     .row()
     .text("گفتگو💬")
     .text("اطلاع به دوستان📣")

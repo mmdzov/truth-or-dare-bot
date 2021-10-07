@@ -1293,6 +1293,36 @@ bot.on("callback_query:data", (ctx, next) => {
   return next();
 });
 
+//! working in comeback command ...
+bot.command("comeback", async (ctx, next) => {
+  //! working...
+  const match = await findFriendMatch(ctx.from.id);
+  if (!match) {
+    const match = findMatch(ctx.from.id);
+
+    return next();
+  }
+  const isMe = match.turn.from.id === ctx.from.id;
+  const userMatchIndex = match.players.findIndex(
+    (item) => item.id === ctx.from.id
+  );
+  ctx.reply("به منوی بازی برگشتی", {
+    reply_markup: {
+      keyboard:
+        +match.owner === ctx.from.id
+          ? newGameFriendshipKeyboard(match, match.mode, isMe).keyboard
+          : newGameAdminKeyboard(
+              match,
+              match.players[userMatchIndex].admin,
+              match.mode
+            ).keyboard,
+      resize_keyboard: true,
+    },
+  });
+
+  return next();
+});
+
 bot.on("message", async (ctx, next) => {
   new DuoPlay().truthOrDareMessage(ctx);
   mtp.multipleReport(ctx);
