@@ -187,7 +187,9 @@ class DuoPlay {
 
     selectMatchSenderReceiver(match.receiver, match.sender);
     let res = await setAnswer(ctx.from.id, ctx.message.text);
+    if (!res) return;
     if (
+      res &&
       res.players.filter((item) => item.answer && item.answer?.length > 0)
         ?.length === res.players.length
     ) {
