@@ -381,6 +381,15 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${unique_secret}
   return next();
 });
 
+bot.on("callback_query:data", (ctx, next) => {
+  const duoPlay = new DuoPlay(ctx);
+  duoPlay.sendRequestToAddFriend(ctx);
+  duoPlay.acceptRequestToAddFriend(ctx);
+  duoPlay.rejectRequestToAddFriend(ctx);
+
+  return next();
+});
+
 bot.hears("لغو و بازگشت", async (ctx, next) => {
   if (ctx.session.friend_game.new_game) {
     await deleteMatch(ctx.from.id);
@@ -838,6 +847,10 @@ bot.hears("شجاعت", async (ctx, next) => {
           },
         }
       );
+
+      let userSession = storage.read(current_user + "");
+      userSession.player.prevent_touch = true;
+      storage.write(current_user + "", userSession);
       await selectMatchSenderReceiver(current_user, ctx.from.id);
     } else {
       ctx.reply("دوست من, هنوز نوبتت نشده");

@@ -81,6 +81,7 @@ class MatchModel {
       console.log(e);
     }
   }
+
   async clearAnswers(user_id) {
     try {
       let matchFinded = await new MatchModel().findMatch(user_id);
@@ -97,6 +98,7 @@ class MatchModel {
       console.log(e);
     }
   }
+
   async detectPlayerTurn(user_id, current_player) {
     let current_match = await new MatchModel().findMatch(user_id);
     if (!current_match) return;
@@ -109,6 +111,7 @@ class MatchModel {
       playerTurn: current_match.players[currentIndex].turn,
     };
   }
+
   async selectPlayerTurn(user_id, current_player, turn = true) {
     try {
       let current_match = await new MatchModel().findMatch(user_id);
@@ -131,6 +134,7 @@ class MatchModel {
       console.log(e);
     }
   }
+
   async selectSpecificPlayerTurn(user_id) {
     try {
       let current_match = await new MatchModel().findMatch(user_id);
@@ -270,12 +274,10 @@ class MatchModel {
   async changeCapacity(user_id) {
     try {
       let current_match = await new MatchModel().findMatch(user_id);
-      console.log(current_match);
       current_match.players[current_match.turn - 1].capacity =
         current_match.players[current_match.turn - 1].capacity - 1;
 
-      //! if capacity === 0 delete match
-      if (current_match.players[current_match.turn - 1].capacity <= 0) {
+      if (current_match.players.every((item) => item.capacity <= 0)) {
         await match.findOneAndDelete({ _id: current_match._id });
         return { finished_game: true, current_match };
       }

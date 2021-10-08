@@ -1,4 +1,4 @@
-const { Keyboard } = require("grammy");
+const { Keyboard, InlineKeyboard } = require("grammy");
 const mainKeyboard = require("../keyboard/main-keyboard");
 const { matchPlayingKeyboard } = require("../keyboard/match-keyboard");
 const {
@@ -13,7 +13,9 @@ const {
 } = require("../model/match-model");
 const { startQueue, findAndNewMatch } = require("../model/queue-model");
 const { reply, send } = require("./msg");
-
+const user = require("../model/user-model");
+const bot = require("../config/require");
+const { addUserFriend } = require("../model/user-model");
 class DuoPlay {
   constructor(ctx) {
     this.ctx = ctx;
@@ -182,6 +184,7 @@ class DuoPlay {
       ctx.reply("باید منتظر بازیکن مقابل باشی دوست من.");
       return;
     }
+
     selectMatchSenderReceiver(match.receiver, match.sender);
     let res = await setAnswer(ctx.from.id, ctx.message.text);
     if (
@@ -193,14 +196,35 @@ class DuoPlay {
       await selectPlayerTurn(ctx.from.id, ctx.from.id, true);
       let res = await changeCapacity(ctx.from.id);
       if (res?.finished_game) {
+        const friends = await user.getUserFriends(match.sender);
+        let hasFriend = friends.some((item) => item === match.receiver);
+        if (!hasFriend) {
+          bot.api.sendMessage(match.receiver, "بازی به اتمام رسید", {
+            reply_markup: {
+              inline_keyboard: new InlineKeyboard().row({
+                text: "ارسال درخواست دوستی➕",
+                callback_data: `request_to_add_friend ${match.sender}`,
+              }).inline_keyboard,
+            },
+          });
+
+          bot.api.sendMessage(match.sender, "بازی به اتمام رسید", {
+            reply_markup: {
+              inline_keyboard: new InlineKeyboard().row({
+                text: "ارسال درخواست دوستی➕",
+                callback_data: `request_to_add_friend ${match.receiver}`,
+              }).inline_keyboard,
+            },
+          });
+        }
         send(
           match.receiver,
-          "بازی به اتمام رسید. بازی جدید رو شروع کن دوست من",
+          "به منوی اصلی برگشتی دوست من",
           mainKeyboard.keyboard
         );
         send(
           match.sender,
-          "بازی به اتمام رسید. بازی جدید رو شروع کن دوست من",
+          "به منوی اصلی برگشتی دوست من",
           mainKeyboard.keyboard
         );
         return;
@@ -209,11 +233,118 @@ class DuoPlay {
       send(match.sender, "نوبت تو شد دوست من");
     } else {
       send(match.receiver, ctx.message.text);
-      ctx.reply("پیام شما برای بازیکن مقابل ارسال شد الان نوبت بازیکن مقابل هست که بازی کند");
+      ctx.reply(
+        "پیام شما برای بازیکن مقابل ارسال شد الان نوبت بازیکن مقابل هست که بازی کند"
+      );
       let receiverUserStorage = storage.read(match.receiver + "");
       receiverUserStorage.player.prevent_touch = true;
       storage.write(match.receiver + "", receiverUserStorage);
     }
+  }
+
+  async sendRequestToAddFriend(ctx) {
+    if (!ctx.callbackQuery.data.includes("request_to_add_friend")) return;
+    const userId = +ctx.callbackQuery.data
+      .split(" ")[1]
+      .match(/[0-9]/g)
+      .join("");
+    const userChat = await bot.api.getChat(userId);
+    const friends = await user.getUserFriends(ctx.from.id);
+    if (friends.includes(userId)) {
+      ctx.answerCallbackQuery({ text: "بازیکن اکنون دوست شماست" });
+      ctx.deleteMessage();
+      return;
+    }
+    let result = await user.sendRequest(ctx.from.id, userId);
+    if (!result) {
+      ctx.answerCallbackQuery({
+        text: "شما یک بار درخواست دوستی فرستادید منتظر پاسخ بازیکن باشید",
+      });
+      return;
+    }
+    ctx.answerCallbackQuery({
+      text: `درخواست دوستی به ${userChat.first_name} ارسال شد`,
+    });
+    bot.api.sendMessage(
+      userId,
+      `بازیکن ${userChat.first_name} یک درخواست دوستی برای شما ارسال کرد`,
+      {
+        reply_markup: {
+          inline_keyboard: new InlineKeyboard().row(
+            {
+              text: "رد درخواست❌",
+              callback_data: `reject_request_add_friend ${ctx.from.id} ${ctx.callbackQuery.message.message_id}`,
+            },
+            {
+              text: "قبول درخواست✅",
+              callback_data: `accept_request_add_friend ${ctx.from.id} ${ctx.callbackQuery.message.message_id}`,
+            }
+          ).inline_keyboard,
+        },
+      }
+    );
+  }
+
+  async acceptRequestToAddFriend(ctx) {
+    if (!ctx.callbackQuery.data.includes("accept_request_add_friend")) return;
+    const userId = +ctx.callbackQuery.data
+      .split(" ")[1]
+      .match(/[0-9]/g)
+      .join("");
+    const messageId = +ctx.callbackQuery.data.split(" ")[2];
+    let result = await user.acceptRequest(ctx.from.id, userId);
+    const userChat = await bot.api.getChat(userId);
+    if (result) {
+      await ctx.answerCallbackQuery({
+        text: `بازیکن ${userChat.first_name} به لیست دوستان شما اضاف شد`,
+      });
+
+      try {
+        bot.api.deleteMessage(userId, messageId);
+      } catch (e) {}
+
+      bot.api.sendMessage(
+        userId,
+        `بازیکن ${ctx.from.first_name} درخواست دوستی شما را قبول کرد`
+      );
+
+      ctx.deleteMessage();
+
+      return;
+    }
+    ctx.answerCallbackQuery({
+      text: "در قبول کردن درخواست دوستی مشکلی پیش آمد",
+    });
+  }
+
+  async rejectRequestToAddFriend(ctx) {
+    if (!ctx.callbackQuery.data.includes("reject_request_add_friend")) return;
+    const userId = +ctx.callbackQuery.data
+      .split(" ")[1]
+      .match(/[0-9]/g)
+      .join("");
+    const messageId = +ctx.callbackQuery.data.split(" ")[2];
+    let result = await user.rejectRequest(ctx.from.id, userId);
+    if (!result) {
+      ctx.answerCallbackQuery({
+        text: "در رد کردن درخواست دوستی مشکلی پیش آمد",
+      });
+      return;
+    }
+    await ctx.answerCallbackQuery({
+      text: `درخواست دوستی لغو شد`,
+    });
+
+    try {
+      bot.api.deleteMessage(userId, messageId);
+    } catch (e) {}
+
+    ctx.deleteMessage();
+
+    bot.api.sendMessage(
+      userId,
+      `بازیکن ${ctx.from.first_name} درخواست دوستی شما را رد کرد`
+    );
   }
 }
 

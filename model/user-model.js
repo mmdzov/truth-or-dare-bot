@@ -41,6 +41,59 @@ class UserModel {
     }
   }
 
+  async sendRequest(user_id, target_id) {
+    try {
+      const getUser = await user.findOne({ user_id: target_id });
+      !getUser.requests ? (getUser.requests = []) : getUser.requests;
+      let index = getUser.requests.findIndex((item) => item === user_id);
+      if (index !== -1) return false;
+      getUser.requests.push(user_id);
+      await user.findOneAndUpdate(
+        { user_id: target_id },
+        { requests: getUser.requests }
+      );
+      return true;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async acceptRequest(user_id, target_id) {
+    try {
+      const getUser = await user.findOne({ user_id });
+      if (getUser.requests?.length === 0) return false;
+      if (!getUser.requests.includes(target_id)) return false;
+      let result = await new UserModel().addUserFriend(user_id, target_id);
+      if (!result) return false;
+      getUser.requests = getUser.requests.filter((item) => item !== target_id);
+      await user.findOneAndUpdate(
+        { user_id },
+        { requests: getUser.requests ?? [] }
+      );
+      return true;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async rejectRequest(user_id, target_id) {
+    try {
+      const getUser = await user.findOne({ user_id });
+      !getUser.requests ? (getUser.requests = []) : getUser.requests;
+      let targetExist = getUser.requests.includes(target_id);
+      // console.log(user_id,target_id)
+      // if (!targetExist) return false;
+      getUser.requests = getUser.requests.filter((item) => item !== target_id);
+      await user.findOneAndUpdate(
+        { user_id },
+        { requests: getUser.requests ?? [] }
+      );
+      return true;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async removeFriend(user_id, friend_id) {
     try {
       const getUser = await user.findOne({ user_id });
