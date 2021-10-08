@@ -130,6 +130,7 @@ bot.use(
           count_players: 0,
           limitInPerTurn: 0,
           sended: false,
+          prevent_touch: false,
         },
         otherPlayer: {
           truthOrDare: {
@@ -423,6 +424,7 @@ bot.hears("بروز کردن منوی انتظار", (ctx, next) => {
 });
 
 bot.hears("بازی آنلاین", (ctx, next) => {
+  if (ctx.session.player.prevent_touch) return next();
   ctx.session.select = "online";
   ctx.reply(
     `خیلی خب دوست من
@@ -871,6 +873,11 @@ bot.hears("حقیقت", async (ctx, next) => {
           },
         }
       );
+
+      //! change sender session
+      let userSession = storage.read(current_user + "");
+      userSession.player.prevent_touch = true;
+      storage.write(current_user + "", userSession);
       await selectMatchSenderReceiver(current_user, ctx.from.id);
     } else {
       ctx.reply("دوست من, هنوز نوبتت نشده");
@@ -881,7 +888,8 @@ bot.hears("حقیقت", async (ctx, next) => {
 
 bot.hears("گزارش بازیکن", async (ctx, next) => {
   const match = await findMatch(ctx.from.id);
-  if (!match || match.player_numbers !== 2) return next();
+  if (!match || match.player_numbers !== 2 || ctx.session.player.prevent_touch)
+    return next();
   ctx.session.player.report = true;
   ctx.reply(
     "علت گزارش علیه بازیکن را در قالب یک پیام بفرستید استفاده از الفاظ رکیک با مسدود کردن شما توسط ربات و نادیده گرفتن گزارش شما همراه خواهد بود",
@@ -1018,7 +1026,7 @@ bot.hears("ثبت گزارش", async (ctx, next) => {
   }
   try {
     let result = await general.duoAcceptSendReportPlayer(ctx);
-    if (!result) {
+    if (!result && ctx.session.player.report_message?.message?.length === 0) {
       ctx.reply("متن گزارش نباید خالی باشد. شما به منوی بازی برگشتید", {
         reply_markup: {
           keyboard: matchPlayingKeyboard.keyboard,
@@ -1125,7 +1133,8 @@ bot.hears("خیر می خواهم ادامه دهم", async (ctx, next) => {
 
 bot.hears("گفتگو با بازیکن", async (ctx, next) => {
   const match = await findMatch(ctx.from.id);
-  if (!match || match.player_numbers !== 2) return next();
+  if (!match || match.player_numbers !== 2 || ctx.session.player?.prevent_touch)
+    return next();
   ctx.session.player.chat = true;
   ctx.reply(
     `می توانید با بازیکن مقابل چت کنید هر زمان خواستید به منوی اصلی برگردید لطفا روی لغو گفتگو بزنید`,
@@ -1212,6 +1221,7 @@ bot.hears("خانم", async (ctx, next) => {
 });
 
 bot.hears("تنظیمات", (ctx, next) => {
+  if (ctx.session.player.prevent_touch) return next();
   ctx.reply(`دستورت چیه دوست من`, {
     reply_markup: {
       keyboard: settingKeyboard.keyboard,
@@ -1222,6 +1232,7 @@ bot.hears("تنظیمات", (ctx, next) => {
 });
 
 bot.hears("بازی دوستانه", (ctx, next) => {
+  if (ctx.session.player.prevent_touch) return next();
   ctx.session.select = "friendship";
   ctx.reply(
     `
@@ -1237,12 +1248,6 @@ bot.hears("بازی دوستانه", (ctx, next) => {
 });
 
 bot.hears("افزودن دوست➕", (ctx, next) => {
-  //   ctx
-  //     .reply(
-  //       `
-  // پیوند یا متن زیر را برای دوستت بفرست و زمانی که روی این پیوند زد یکی از دوستای همدیگر به حساب میاید `
-  //     )
-  //     .then((res) => {
   ctx.reply(`
 سلام دوست من 
 دوست داری باهمدیگه شجاعت حقیقت بازی کنیم؟ 
@@ -1253,7 +1258,6 @@ bot.hears("افزودن دوست➕", (ctx, next) => {
 این لینک ربات رو استارت بزن که جزوی از دوستان من هم توی این ربات باشی
 
 t.me/jorathaqiqatonline_bot?start=${ctx.from.id}`);
-  // });
   return next();
 });
 
@@ -1354,7 +1358,7 @@ bot.command("comeback", async (ctx, next) => {
 });
 
 bot.on("message", async (ctx, next) => {
-  new DuoPlay().truthOrDareMessage(ctx);
+  new DuoPlay().truthOrDareMessage(ctx, storage);
   mtp.multipleReport(ctx);
   general.chat(ctx);
   mtp.chatPlayers(ctx);

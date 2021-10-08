@@ -56,6 +56,7 @@ const defaultSession = {
     count_players: 0,
     limitInPerTurn: 0,
     sended: false,
+    prevent_touch: false,
   },
   otherPlayer: {
     truthOrDare: {

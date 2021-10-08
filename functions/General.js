@@ -22,6 +22,15 @@ class General {
     )
       return;
     let user_id_players = await findMatch(ctx.from.id);
+    const hasCantSendMsg = user_id_players.players
+      .filter((item) => item.user_id !== ctx.from.id)?.[0]
+      ?.hiddenMessages?.includes(ctx.from.id);
+    if (hasCantSendMsg === true) {
+      ctx.reply(`
+پیام ارسال نشد.
+بازیکن مقابل پیام ها را مخفی کرده`);
+      return;
+    }
     user_id_players = user_id_players.players
       ?.map((item) => {
         if (item.user_id !== ctx.from.id) {

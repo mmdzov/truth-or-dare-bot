@@ -125,8 +125,31 @@ class DuoPlay {
       }
     } else reply(ctx, "خطایی رخ داده لطفا کمی بعد دوباره امتحان کنید");
   }
-  async truthOrDareMessage(ctx) {
-    if (ctx.session.player.chat) return;
+  async truthOrDareMessage(ctx, storage) {
+    if (ctx.message.text.includes("لغو گفتگو") || ctx.session.player.chat)
+      return;
+    if (ctx.session.player?.prevent_touch) {
+      const msg = ctx.message.text;
+      if (
+        msg.includes("بازی آنلاین") ||
+        msg.includes("بازی دوستانه") ||
+        msg.includes("تنظیمات") ||
+        msg.includes("گزارش بازیکن") ||
+        msg.includes("ثبت گزارش") ||
+        msg.includes("لغو گزارش") ||
+        msg.includes("گفتگو با بازیکن") ||
+        msg.includes("بازگشت") ||
+        msg.includes("خروج از بازی") ||
+        msg.split("")[0] === "/" ||
+        ctx.session.player?.report_message?.user_id?.length > 0
+      ) {
+        ctx.reply(
+          "تا زمانی که نوبت شما هست نمی توانید از دکمه ها و دستورات استفاده کنید لطفا نوبت خود را بازی کنید"
+        );
+        return;
+      }
+      ctx.session.player.prevent_touch = false;
+    }
     let match = await findMatch(ctx.from.id);
     if (!match?.sender) return; //? If it was not a two-player game, returned
     if (!match) return;
@@ -186,6 +209,10 @@ class DuoPlay {
       send(match.sender, "نوبت تو شد دوست من");
     } else {
       send(match.receiver, ctx.message.text);
+      ctx.reply("پیام شما برای بازیکن مقابل ارسال شد الان نوبت بازیکن مقابل هست که بازی کند");
+      let receiverUserStorage = storage.read(match.receiver + "");
+      receiverUserStorage.player.prevent_touch = true;
+      storage.write(match.receiver + "", receiverUserStorage);
     }
   }
 }
