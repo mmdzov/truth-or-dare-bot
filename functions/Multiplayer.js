@@ -29,7 +29,7 @@ class Multiplayer {
     ctx.session.waitForFindPlayer = true;
     const data = {
       multiplayer: mtp, //! this is test but parameter is multiplayer
-      player_numbers: multiplayer,
+      player_numbers: mtp, //! this is test but parameter is multiplayer
       user_id: ctx.from.id,
       date: Date.now(),
       matched: undefined,
@@ -233,7 +233,7 @@ ${ctx.message.text}`,
 
   async multipleReport(ctx, next = () => {}) {
     if (Object.keys(ctx.session.report_message).length === 0) return;
-    if (ctx.message.text.length > 60) return;
+    if (ctx.message.text.length > 60 || !ctx.session.process.report_player) return;
     ctx.session.report_message.message = ctx.message.text;
     ctx.reply("گزارش شما انجام شد برای ثبت گزارش بر روی دکمه ثبت گزارش بزنید.");
     return next();
