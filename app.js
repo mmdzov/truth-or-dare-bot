@@ -715,7 +715,7 @@ const handleReportPlayer = async (ctx, next = () => {}) => {
     `
 متن گزارش را ارسال کنید
 گزارش شما به گوش دیگر افراد بازی میرسد
-اگر تعداد گزارش ها به تعداد تیم بجز فرد گزارش شده برسد اون فرد گزارش شده از بازی فعلی حذف خواهد شد.
+اگر تعداد گزارش ها به تعداد اعضای این تیم بجز فرد گزارش شده برسد اون فرد گزارش شده از بازی فعلی حذف خواهد شد.
 توجه: متن گزارش باید کمتر از 60 کارکتر باشد`,
     {
       reply_markup: {
@@ -781,6 +781,7 @@ bot.on("callback_query:data", async (ctx, next) => {
     hasTurn: match.question.from.id === ctx.from.id,
   };
   let target = await bot.api.getChat(user_id);
+  // ctx.session.process.player_chat = true
   ctx.reply(
     `
 هم اکنون می توانید با ${target.first_name} گفتگو کنید 
@@ -1176,6 +1177,7 @@ bot.on("callback_query:data", async (ctx, next) => {
     user_id: target_id,
     hasTurn: match.question.from.id === ctx.from.id,
   };
+  ctx.session.process.player_chat = true
   ctx.reply(
     `
 هم اکنون می توانید با ${target.first_name} گفتگو کنید 

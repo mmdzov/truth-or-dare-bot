@@ -232,8 +232,21 @@ ${ctx.message.text}`,
   }
 
   async multipleReport(ctx, next = () => {}) {
+    const msg = ctx.message.text;
+    if (
+      msg.includes("⚠️گزارش بازیکن") ||
+      msg.includes("🗣گفتگو با بازیکن خاص") ||
+      msg.includes("👥گفتگو با بازیکنان") ||
+      msg.includes("بازگشت") ||
+      msg.includes("خیر می خواهم ادامه دهم") ||
+      msg.includes("📝جزئیات بازی") ||
+      msg.includes("🚷ترک بازی") ||
+      msg.includes('بپرس شجاعت یا حقیقت؟') 
+    )
+      return;
     if (Object.keys(ctx.session.report_message).length === 0) return;
-    if (ctx.message.text.length > 60 || !ctx.session.process.report_player) return;
+    if (ctx.message.text.length > 60 || !ctx.session.process.report_player)
+      return;
     ctx.session.report_message.message = ctx.message.text;
     ctx.reply("گزارش شما انجام شد برای ثبت گزارش بر روی دکمه ثبت گزارش بزنید.");
     return next();
