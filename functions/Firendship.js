@@ -853,7 +853,10 @@ ${ctx.message.text}`
       if (!result) return next();
 
       result.players.map((item) => {
-        if (item.id !== ctx.from.id) {
+        if (
+          item.id !== result.turn.from.id &&
+          item.id !== result.turn?.to?.id
+        ) {
           bot.api.sendMessage(
             item.id,
             `بازی توسط ${ctx.from.first_name} شروع شد`,
@@ -883,7 +886,7 @@ ${ctx.message.text}`
                 },
               }
             );
-          } else {
+          } else if (item.id === result.turn.from.id) {
             ctx.reply(
               `بازی توسط شما شروع شد و قرار است ${result.turn.to.first_name} را به چالش بکشید 
   حالا روی دکمه ی بپرس بزن تا شجاعت یا حقیقت رو انتخاب کنه`,
