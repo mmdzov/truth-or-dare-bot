@@ -206,13 +206,14 @@ class Friendship {
       }
       if (!result?.players) return next();
       result.players.map((item) => {
-        if (item.id !== ctx.from.id) {
+        console.log(item.id !== ctx.from.id && item.id !== userChat.id)
+        if (item.id !== ctx.from.id && item.id !== userChat.id) {
           bot.api.sendMessage(
             item.id,
             `
           بازیکن ${userChat.first_name} توسط ${ctx.from.first_name} از بازی حذف شد`
           );
-        } else {
+        } else if(item.id === ctx.from.id) {
           bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
             text: "بازیکن توسط شما از بازی حذف شد",
           });
