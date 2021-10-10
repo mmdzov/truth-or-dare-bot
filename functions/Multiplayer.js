@@ -25,11 +25,11 @@ const general = new General();
 class Multiplayer {
   constructor() {}
   async handleStartQueue(ctx, multiplayer) {
-    const mtp = 2;
+    // const mtp = 2;
     ctx.session.waitForFindPlayer = true;
     const data = {
-      multiplayer: mtp, //! this is test but parameter is multiplayer
-      player_numbers: mtp, //! this is test but parameter is multiplayer
+      multiplayer: multiplayer, //! this is test but parameter is multiplayer
+      player_numbers: multiplayer, //! this is test but parameter is multiplayer
       user_id: ctx.from.id,
       date: Date.now(),
       matched: undefined,
