@@ -199,7 +199,7 @@ class General {
         bot.api.sendMessage(
           users[0].user_id,
           `
-بازیکن مقابل از بازی خارج شد و بازی به اتمام رسید
+بازیکن مقابل ${ctx.from.first_name} از بازی خارج شد و بازی به اتمام رسید
   `,
           {
             reply_markup: {
@@ -219,7 +219,7 @@ class General {
           bot.api.sendMessage(
             user.user_id,
             `
-یکی از بازیکنان از بازی خارج شد
+بازیکن ${ctx.from.first_name} از بازی خارج شد
           `
           );
         });
