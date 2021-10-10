@@ -130,6 +130,16 @@ class FriendsMatchModel {
     }
   }
 
+  async getPlayersMatch(_id) {
+    try {
+      const match = await friendsMatch.findOne({ _id });
+      if (!match) return { not_found: true };
+      return { players: match?.players };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async createModifyLink(user_id, secret_link) {
     try {
       const match = await new FriendsMatchModel().findFriendMatch(user_id);
@@ -265,14 +275,14 @@ class FriendsMatchModel {
     const ff = new FriendsMatchModel();
     try {
       const match = await ff.findFriendMatch(user_id);
-      let result = await ff.checkPlayerAdmin(match._id, user_id);
+      await ff.checkPlayerAdmin(match._id, user_id);
       // if (!result || match.started) return false; //!default enabled
-      await friendsMatch.findOneAndUpdate(
+      let result = await friendsMatch.findOneAndUpdate(
         { _id: match._id },
         { started: true },
         { new: true }
       );
-      return match;
+      return result;
     } catch (e) {
       console.log(e);
     }

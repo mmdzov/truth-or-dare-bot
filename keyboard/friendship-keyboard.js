@@ -14,6 +14,7 @@ const newGameFriendshipKeyboard = (
   mode = "private",
   isMe = false
 ) => {
+  console.log(match, isMe);
   return new Keyboard()
     .row(match?.started ? (isMe ? "بپرس🗣" : "") : "")
     .text("بازیکنان👥")
@@ -89,21 +90,29 @@ const newPlayerInlineSetting = (
         : { text: "دکمه قفل شده", callback_data: "دکمه قفل شده" }
     )
     .row(
-      limit_player || isOwner
-        ? {
-            text: "محدود کردن بازیکن",
-            callback_data: `limitationPlayer_friendship ${user_id}`,
-          }
-        : { text: "دکمه قفل شده", callback_data: "دکمه قفل شده" }
-    )
-    .row(
       promote_player || isOwner
         ? {
-            text: "ارتقاء بازیکن",
-            callback_data: `promotePlayer_friendship ${user_id}`,
+            text: "حذف و مسدود بازیکن",
+            callback_data: `removeAndBanPlayer_friendship ${user_id}`,
           }
         : { text: "دکمه قفل شده", callback_data: "دکمه قفل شده" }
     );
+  // .row(
+  //   limit_player || isOwner
+  //     ? {
+  //         text: "محدود کردن بازیکن",
+  //         callback_data: `limitationPlayer_friendship ${user_id}`,
+  //       }
+  //     : { text: "دکمه قفل شده", callback_data: "دکمه قفل شده" }
+  // )
+  // .row(
+  //   promote_player || isOwner
+  //     ? {
+  //         text: "ارتقاء بازیکن",
+  //         callback_data: `promotePlayer_friendship ${user_id}`,
+  //       }
+  //     : { text: "دکمه قفل شده", callback_data: "دکمه قفل شده" }
+  // )
 };
 
 const setAdminAccessLevel = (user_id, promote) => {

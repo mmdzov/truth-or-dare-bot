@@ -145,6 +145,19 @@ class UserModel {
     }
   }
 
+  async getUserReports(user_id) {
+    try {
+      const current_user = await user.findOne({ user_id });
+      return (
+        current_user?.reports?.map((item) => {
+          return item.user_id;
+        }) || []
+      );
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async addReport(user_id, report = { user_id: 0, message: "" }) {
     try {
       const userFinded = await user.findOne({ user_id });
@@ -154,7 +167,7 @@ class UserModel {
           .length > 0;
       if (beforeExist) return { alreadyReported: true };
       userFinded.reports.push(report);
-      await findOneAndUpdate({ user_id }, { reports: userFinded.reports });
+      await user.findOneAndUpdate({ user_id }, { reports: userFinded.reports });
       return { report: true };
     } catch (e) {
       console.log(e);

@@ -142,7 +142,6 @@ class General {
         user.user_id,
         ctx.session.player.report_message
       );
-      console.log(result);
       if (result?.alreadyReported) {
         ctx.reply("کاربر قبلا مسدود شده");
         return;

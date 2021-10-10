@@ -28,8 +28,13 @@ const {
   startGame,
   checkUserInGame,
   joinUserToFriendMatch,
+  getPlayersMatch,
 } = require("../model/friends-match-model");
-const { getUserFriends } = require("../model/user-model");
+const {
+  getUserFriends,
+  addReport,
+  getUserReports,
+} = require("../model/user-model");
 const joinGame = require("../utils/joinGame");
 const general = require("./General");
 class Friendship {
@@ -193,10 +198,26 @@ class Friendship {
 
     //! remove user callback
     bot.on("callback_query:data", async (ctx, next) => {
-      if (!ctx.callbackQuery.data.includes("removePlayer_friendship"))
+      // removeAndBanPlayer_friendship
+      if (
+        !ctx.callbackQuery.data.includes("removePlayer_friendship") &&
+        !ctx.callbackQuery.data.includes("removeAndBanPlayer_friendship")
+      )
         return next();
       const user_id = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
       const userChat = await bot.api.getChat(user_id);
+      if (ctx.callbackQuery.data.includes("removeAndBanPlayer_friendship")) {
+        let resultBan = await addReport(user_id, {
+          user_id: ctx.from.id,
+          message: "Banned from match",
+        });
+        if (resultBan?.alreadyReported) {
+          ctx.reply("درحال حاظر بازیکن مسدود شده");
+        }
+        if (resultBan?.report) {
+          ctx.reply(`بازیکن ${userChat.first_name} مسدود شد`);
+        }
+      }
       let result = await removePlayer(ctx.from.id, user_id);
       if (result?.not_exist) {
         bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
@@ -206,14 +227,13 @@ class Friendship {
       }
       if (!result?.players) return next();
       result.players.map((item) => {
-        console.log(item.id !== ctx.from.id && item.id !== userChat.id)
         if (item.id !== ctx.from.id && item.id !== userChat.id) {
           bot.api.sendMessage(
             item.id,
             `
           بازیکن ${userChat.first_name} توسط ${ctx.from.first_name} از بازی حذف شد`
           );
-        } else if(item.id === ctx.from.id) {
+        } else if (item.id === ctx.from.id) {
           bot.api.answerCallbackQuery(ctx.callbackQuery.id, {
             text: "بازیکن توسط شما از بازی حذف شد",
           });
@@ -614,10 +634,30 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
     //!finally open game
     bot.on("callback_query:data", async (ctx, next) => {
       if (!ctx.callbackQuery.data.includes("open_friend_game")) return next();
+      let { players } = await getPlayersMatch(
+        ctx.callbackQuery.data.split(" ")[1]
+      );
+      players = players?.map((item) => {
+        return item?.id;
+      });
+      let userReports = await getUserReports(ctx.from.id);
+      let hasReported =
+        players
+          .map((item) => {
+            if (userReports.includes(item)) return true;
+          })
+          .filter((item) => item === true).length > 0;
+
       const result = await openPublicMatch(
         ctx.callbackQuery.data.split(" ")[1],
         ctx.from
       );
+      if (hasReported) {
+        ctx.answerCallbackQuery({
+          text: `نمی توانید وارد شوید یکی از بازیکنان این بازی شما را مسدود کرده`,
+        });
+        return;
+      }
       if (result.alreadyJoinedAMatch) {
         ctx.answerCallbackQuery({ text: "درحال حاظر شما در یک بازی هستید" });
         return next();
