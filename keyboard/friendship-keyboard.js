@@ -14,7 +14,6 @@ const newGameFriendshipKeyboard = (
   mode = "private",
   isMe = false
 ) => {
-  console.log(match, isMe);
   return new Keyboard()
     .row(match?.started ? (isMe ? "بپرس🗣" : "") : "")
     .text("بازیکنان👥")

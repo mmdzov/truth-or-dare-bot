@@ -927,9 +927,11 @@ ${ctx.message.text}`
       const { from, to } = match.turn;
       let chatDisable = { hasTurn: false, chat: false };
       ctx.session.friend_game.chat = chatDisable;
-      let sessionTo = storage.read(to.id);
-      sessionTo.friend_gmae.chat = chatDisable;
-      storage.write(to.id, sessionTo);
+      try {
+        let sessionTo = storage.read(to.id + "");
+        sessionTo.friend_game.chat = chatDisable;
+        storage.write(to.id, sessionTo);
+      } catch (e) {}
 
       //! IMPORTANT
       bot.api.sendMessage(
@@ -939,7 +941,7 @@ ${ctx.message.text}`
 حالا یکی رو انتخاب کن`,
         {
           reply_markup: {
-            keyboard: new Keyboard().text("").row().text("").keyboard,
+            keyboard: new Keyboard().text("شجاعت").row().text("حقیقت").keyboard,
             resize_keyboard: true,
           },
         }

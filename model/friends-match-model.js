@@ -36,6 +36,29 @@ class FriendsMatchModel {
     }
   }
 
+  async friendMatchselectTruthOrDare(user_id, mode = "") {
+    try {
+      const friendMatch = await new FriendsMatchModel().findFriendMatch(
+        user_id
+      );
+      if (!friendMatch) return { not_found: true };
+      if (friendMatch.turn?.to?.id !== user_id) return { not_turn: true };
+      if (friendMatch.turn.to?.mode?.length > 0)
+        return { already_selected: true };
+      friendMatch.turn.to.mode = mode;
+      const match = await friendsMatch.findOneAndUpdate(
+        { _id: friendMatch._id },
+        {
+          turn: friendMatch.turn,
+        },
+        { new: true }
+      );
+      return { match };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async getMatchLimits(user_id) {
     try {
       const ff = new FriendsMatchModel();

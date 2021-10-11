@@ -59,6 +59,7 @@ const {
   joinUserToFriendMatch,
   findFriendMatch,
   getMyFriends,
+  friendMatchselectTruthOrDare,
 } = require("./model/friends-match-model");
 const Friendship = require("./functions/firendship");
 const joinGame = require("./utils/joinGame");
@@ -819,83 +820,137 @@ bot.hears("بپرس شجاعت یا حقیقت", async (ctx, next) => {
   return next();
 });
 
+async function friendSelectMode(ctx, mode) {
+  let result = await friendMatchselectTruthOrDare(ctx.from.id, mode);
+  const title = mode === "dare" ? "شجاعت" : "حقیقت";
+  if (result?.already_selected) {
+    ctx.reply(
+      "دوست من تو قبلا یک گزینه رو انتخاب کردی باید منتظر باشی که دوستت بهت بگه چیکار کنی"
+    );
+    return next();
+  } else if (result?.not_found) {
+    ctx.reply("بازی یافت نشد");
+  } else if (result?.not_turn) {
+    ctx.reply("دوست من هنوز نوبتت نشده");
+  }
+
+  ctx.reply(
+    `${title} انتخاب شد منتظر باش دوستت ${
+      mode === "dare" ? "بهت بگه چیکار کنی" : "ازت سوال بپرسه"
+    }`,
+    {
+      reply_markup: {
+        keyboard: newGameFriendshipKeyboard(
+          result.match,
+          result.match.mode,
+          false
+        ).keyboard,
+        resize_keyboard: true,
+      },
+    }
+  );
+  bot.api.sendMessage(
+    result.match.turn.from.id,
+    `دوستت ${ctx.from.first_name} ${title} رو انتخاب کرد حالا ${mode === "dare" ? "می خوای چیکار کنه ؟" : "سوالتو ازش بپرس"}`
+  );
+  result.match.players.map((item) => {
+    if (
+      item.id === result.match.turn.from.id ||
+      item.id === result.match.turn?.to?.id
+    )
+      return;
+    bot.api.sendMessage(
+      item.id,
+      `بازیکن ${ctx.from.first_name} ${title} رو انتخاب کرد`
+    );
+  });
+}
+
 bot.hears("شجاعت", async (ctx, next) => {
   let match = await findMatch(ctx.from.id);
-  if (match) {
-    // general?.disableAllProcessPlayer(qst.to.id, storage);
-    // general?.disableAllProcessPlayer(qst.from.id, storage);
-    ctx.session.player.truthOrDare.truth = false;
-    ctx.session.player.truthOrDare.dare = true;
-    let turn = match.players[match.turn - 1];
-    if (turn.user_id !== ctx.from.id) {
-      ctx.reply("تو خیلی شجاعی دوست من منتظر باش که بهت بگه چیکار کنی", {
+  if (!match) {
+    try {
+      friendSelectMode(ctx, "dare");
+    } catch (e) {}
+    return next();
+  }
+  // general?.disableAllProcessPlayer(qst.to.id, storage);
+  // general?.disableAllProcessPlayer(qst.from.id, storage);
+  ctx.session.player.truthOrDare.truth = false;
+  ctx.session.player.truthOrDare.dare = true;
+  let turn = match.players[match.turn - 1];
+  if (turn.user_id !== ctx.from.id) {
+    ctx.reply("تو خیلی شجاعی دوست من منتظر باش که بهت بگه چیکار کنی", {
+      reply_markup: {
+        keyboard: matchPlayingKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
+    let current_user = match.players.filter(
+      (item) => item.user_id !== ctx.from.id
+    )[0].user_id;
+    await selectPlayerTurn(ctx.from.id, current_user, false);
+    bot.api.sendMessage(
+      current_user,
+      "دوستت شجاعت رو انتخاب کرد حالا کاری که میخوای انجام بده رو بهش بگو",
+      {
         reply_markup: {
           keyboard: matchPlayingKeyboard.keyboard,
           resize_keyboard: true,
         },
-      });
-      let current_user = match.players.filter(
-        (item) => item.user_id !== ctx.from.id
-      )[0].user_id;
-      await selectPlayerTurn(ctx.from.id, current_user, false);
-      bot.api.sendMessage(
-        current_user,
-        "دوستت شجاعت رو انتخاب کرد حالا کاری که میخوای انجام بده رو بهش بگو",
-        {
-          reply_markup: {
-            keyboard: matchPlayingKeyboard.keyboard,
-            resize_keyboard: true,
-          },
-        }
-      );
+      }
+    );
 
-      let userSession = storage.read(current_user + "");
-      userSession.player.prevent_touch = true;
-      storage.write(current_user + "", userSession);
-      await selectMatchSenderReceiver(current_user, ctx.from.id);
-    } else {
-      ctx.reply("دوست من, هنوز نوبتت نشده");
-    }
+    let userSession = storage.read(current_user + "");
+    userSession.player.prevent_touch = true;
+    storage.write(current_user + "", userSession);
+    await selectMatchSenderReceiver(current_user, ctx.from.id);
+  } else {
+    ctx.reply("دوست من, هنوز نوبتت نشده");
   }
   return next();
 });
 
 bot.hears("حقیقت", async (ctx, next) => {
   let match = await findMatch(ctx.from.id);
-  if (match) {
-    ctx.session.player.truthOrDare.truth = true;
-    ctx.session.player.truthOrDare.dare = false;
-    let turn = match.players[match.turn - 1];
-    if (turn.user_id !== ctx.from.id) {
-      ctx.reply("منتظر باش ازت سوال بپرسه", {
+  if (!match) {
+    try {
+      friendSelectMode(ctx, "truth");
+    } catch (e) {}
+    return next();
+  }
+  ctx.session.player.truthOrDare.truth = true;
+  ctx.session.player.truthOrDare.dare = false;
+  let turn = match.players[match.turn - 1];
+  if (turn.user_id !== ctx.from.id) {
+    ctx.reply("منتظر باش ازت سوال بپرسه", {
+      reply_markup: {
+        keyboard: matchPlayingKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
+    let current_user = match.players.filter(
+      (item) => item.user_id !== ctx.from.id
+    )[0].user_id;
+    await selectPlayerTurn(ctx.from.id, current_user, false);
+    bot.api.sendMessage(
+      current_user,
+      "دوستت حقیقت رو انتخاب کرد حالا یه سوال ازش بپرس",
+      {
         reply_markup: {
           keyboard: matchPlayingKeyboard.keyboard,
           resize_keyboard: true,
         },
-      });
-      let current_user = match.players.filter(
-        (item) => item.user_id !== ctx.from.id
-      )[0].user_id;
-      await selectPlayerTurn(ctx.from.id, current_user, false);
-      bot.api.sendMessage(
-        current_user,
-        "دوستت حقیقت رو انتخاب کرد حالا یه سوال ازش بپرس",
-        {
-          reply_markup: {
-            keyboard: matchPlayingKeyboard.keyboard,
-            resize_keyboard: true,
-          },
-        }
-      );
+      }
+    );
 
-      //! change sender session
-      let userSession = storage.read(current_user + "");
-      userSession.player.prevent_touch = true;
-      storage.write(current_user + "", userSession);
-      await selectMatchSenderReceiver(current_user, ctx.from.id);
-    } else {
-      ctx.reply("دوست من, هنوز نوبتت نشده");
-    }
+    //! change sender session
+    let userSession = storage.read(current_user + "");
+    userSession.player.prevent_touch = true;
+    storage.write(current_user + "", userSession);
+    await selectMatchSenderReceiver(current_user, ctx.from.id);
+  } else {
+    ctx.reply("دوست من, هنوز نوبتت نشده");
   }
   return next();
 });
@@ -934,7 +989,7 @@ bot.hears("⚠️گزارش بازیکن", async (ctx, next) => {
     reply_markup: { inline_keyboard: inlineKey.inline_keyboard },
   });
   ctx.session.process.report_player = true;
-  return next()
+  return next();
 });
 
 bot.hears("❗️ گزارش بازی", (ctx, next) => {
@@ -1177,7 +1232,7 @@ bot.on("callback_query:data", async (ctx, next) => {
     user_id: target_id,
     hasTurn: match.question.from.id === ctx.from.id,
   };
-  ctx.session.process.player_chat = true
+  ctx.session.process.player_chat = true;
   ctx.reply(
     `
 هم اکنون می توانید با ${target.first_name} گفتگو کنید 
