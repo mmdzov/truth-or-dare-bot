@@ -12,10 +12,11 @@ const mainFriendshipKeyboard = new Keyboard()
 const newGameFriendshipKeyboard = (
   match = {},
   mode = "private",
-  isMe = false
+  isMe = false,
+  isEnabled = true,
 ) => {
   return new Keyboard()
-    .row(match?.started ? (isMe ? "بپرس🗣" : "") : "")
+    .row(isEnabled ? match?.started ? (isMe ? "بپرس🗣" : "") : "" : "")
     .text("بازیکنان👥")
     .text(match?.started ? "" : "شروع بازی🎮")
     .row()

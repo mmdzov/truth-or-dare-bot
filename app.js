@@ -827,12 +827,18 @@ async function friendSelectMode(ctx, mode) {
     ctx.reply(
       "دوست من تو قبلا یک گزینه رو انتخاب کردی باید منتظر باشی که دوستت بهت بگه چیکار کنی"
     );
-    return next();
+    return;
   } else if (result?.not_found) {
     ctx.reply("بازی یافت نشد");
   } else if (result?.not_turn) {
     ctx.reply("دوست من هنوز نوبتت نشده");
   }
+  
+  const getTo = result.match.players.map((item) => {
+    if (item.id === result.match.turn?.to?.id) {
+      return item;
+    }
+  });
 
   ctx.reply(
     `${title} انتخاب شد منتظر باش دوستت ${
@@ -840,18 +846,25 @@ async function friendSelectMode(ctx, mode) {
     }`,
     {
       reply_markup: {
-        keyboard: newGameFriendshipKeyboard(
-          result.match,
-          result.match.mode,
-          false
-        ).keyboard,
+        keyboard: getTo
+          ? getTo?.isOwner
+            ? newGameFriendshipKeyboard(
+                result.match,
+                result.match.mode,
+                result.match.turn.from.id === ctx.from.id
+              ).keyboard
+            : newGameAdminKeyboard(result.match, getTo?.admin, result.mode)
+                .keyboard
+          : "",
         resize_keyboard: true,
       },
     }
   );
   bot.api.sendMessage(
     result.match.turn.from.id,
-    `دوستت ${ctx.from.first_name} ${title} رو انتخاب کرد حالا ${mode === "dare" ? "می خوای چیکار کنه ؟" : "سوالتو ازش بپرس"}`
+    `دوستت ${ctx.from.first_name} ${title} رو انتخاب کرد حالا ${
+      mode === "dare" ? "می خوای چیکار کنه ؟" : "سوالتو ازش بپرس"
+    }`
   );
   result.match.players.map((item) => {
     if (

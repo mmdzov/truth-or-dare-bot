@@ -924,6 +924,14 @@ ${ctx.message.text}`
       const match = await findFriendMatch(ctx.from.id);
       if (!match || match?.turn?.from?.id !== ctx.from.id || !match?.turn?.to)
         return next();
+      if (match.turn?.to?.mode?.length > 0) {
+        ctx.reply(
+          `دوست من قبلا یک بار ازش پرسیدی و ${
+            match.turn?.to?.mode === "dare" ? "شجاعت" : "حقیقت"
+          } رو انتخاب کرده حالا کاری که می خوای انجام بده رو بهش بگو`
+        );
+        return next()
+      }
       const { from, to } = match.turn;
       let chatDisable = { hasTurn: false, chat: false };
       ctx.session.friend_game.chat = chatDisable;
