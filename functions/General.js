@@ -115,6 +115,7 @@ class General {
     }
   }
   async duoReporPlayer(ctx) {
+    if (!ctx.message?.text) return;
     if (ctx.message.text.includes("ثبت گزارش")) return;
     if (
       ctx.session.player.report &&

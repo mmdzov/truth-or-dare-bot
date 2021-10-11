@@ -128,7 +128,7 @@ class DuoPlay {
     } else reply(ctx, "خطایی رخ داده لطفا کمی بعد دوباره امتحان کنید");
   }
   async truthOrDareMessage(ctx, storage) {
-    if (ctx.message.text.includes("لغو گفتگو") || ctx.session.player.chat)
+    if (ctx.message.text?.includes("لغو گفتگو") || ctx.session.player.chat)
       return;
     if (ctx.session.player?.prevent_touch) {
       const msg = ctx.message.text;

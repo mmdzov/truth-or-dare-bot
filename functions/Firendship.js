@@ -29,6 +29,7 @@ const {
   checkUserInGame,
   joinUserToFriendMatch,
   getPlayersMatch,
+  saveMessagePlayer,
 } = require("../model/friends-match-model");
 const {
   getUserFriends,
@@ -37,6 +38,31 @@ const {
 } = require("../model/user-model");
 const joinGame = require("../utils/joinGame");
 const general = require("./General");
+const { advanceSend } = require("./msg");
+
+let ignore_keyboards = [
+  "👥گفتگو با بازیکنان",
+  "🗣گفتگو با بازیکن خاص",
+  "⚠️گزارش بازیکن",
+  "❗️ گزارش بازی",
+  "📝جزئیات بازی",
+  "🚷ترک بازی",
+  "بازگشت",
+  "بازیکنان👥",
+  "شروع بازی🎮",
+  "گفتگو💬",
+  "اطلاع به دوستان📣",
+  "محدودیت بازی📝",
+  "ایجاد/تغییر لینک اختصاصی🔏",
+  "ایجاد/تغییر لینک سریع🔏",
+  "محدودیت بازی📝",
+  "دریافت لینک بازی🗳",
+  "لغو و بازگشت",
+  "شخصی کردن بازی🔑",
+  "بپرس🗣",
+  "عمومی کردن بازی🌍",
+];
+
 class Friendship {
   async readyPlayers(ctx, editMode = false) {
     let players = await getAllPlayers(null, ctx.from.id);
@@ -764,28 +790,6 @@ t.me/jorathaqiqatonline_bot?start=friendship_match${result?.secret_link}`);
 
     bot.on("message", async (ctx, next) => {
       if (!ctx.session.friend_game.chat.chat) return next();
-      let ignore_keyboards = [
-        "👥گفتگو با بازیکنان",
-        "🗣گفتگو با بازیکن خاص",
-        "⚠️گزارش بازیکن",
-        "❗️ گزارش بازی",
-        "📝جزئیات بازی",
-        "🚷ترک بازی",
-        "بازگشت",
-        "بازیکنان👥",
-        "شروع بازی🎮",
-        "گفتگو💬",
-        "اطلاع به دوستان📣",
-        "محدودیت بازی📝",
-        "ایجاد/تغییر لینک اختصاصی🔏",
-        "ایجاد/تغییر لینک سریع🔏",
-        "محدودیت بازی📝",
-        "دریافت لینک بازی🗳",
-        "لغو و بازگشت",
-        "شخصی کردن بازی🔑",
-        "بپرس🗣",
-        "عمومی کردن بازی🌍",
-      ];
       if (ignore_keyboards.includes(ctx.message.text)) return next();
       const match = await findFriendMatch(ctx.from.id);
       if (!match) return next();
@@ -930,7 +934,7 @@ ${ctx.message.text}`
             match.turn?.to?.mode === "dare" ? "شجاعت" : "حقیقت"
           } رو انتخاب کرده حالا کاری که می خوای انجام بده رو بهش بگو`
         );
-        return next()
+        return next();
       }
       const { from, to } = match.turn;
       let chatDisable = { hasTurn: false, chat: false };
@@ -954,6 +958,32 @@ ${ctx.message.text}`
           },
         }
       );
+    });
+
+    //! play game send question truth / command dare
+    bot.on("message", async (ctx, next) => {
+      const result = await findFriendMatch(ctx.from.id);
+      if (!result) return next();
+      if (ignore_keyboards?.includes(ctx.message?.text)) return next();
+      const saveMsgResult = await saveMessagePlayer(ctx.from.id, {
+        ...ctx.update.message,
+      });
+      if (!saveMsgResult) return next();
+      await advanceSend(
+        ctx,
+        ctx.from.id + "",
+        new InlineKeyboard().row({
+          text: "ارسال به بازیکن",
+          callback_data: `send_to_player ${ctx.from.id}`,
+        })
+      );
+      return next();
+    });
+
+    bot.on("callback_query:data", (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("send_to_player")) return next();
+      //! then after send data we want to change turn player
+
     });
   }
 }

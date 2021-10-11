@@ -233,6 +233,7 @@ ${ctx.message.text}`,
 
   async multipleReport(ctx, next = () => {}) {
     const msg = ctx.message.text;
+    if(!msg) return next()
     if (
       msg.includes("⚠️گزارش بازیکن") ||
       msg.includes("🗣گفتگو با بازیکن خاص") ||

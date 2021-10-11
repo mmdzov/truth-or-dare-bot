@@ -331,6 +331,42 @@ class FriendsMatchModel {
     return { keyboard };
   }
 
+  async saveMessagePlayer(user_id, data = {}) {
+    try {
+      const friendMatch = await new FriendsMatchModel().findFriendMatch(
+        user_id
+      );
+      let result = { finded: false, turn: {} };
+      const turn = friendMatch.turn;
+      for (let i in turn) {
+        if (turn[i].id === user_id) result = { finded: true, turn: turn[i] };
+      }
+      if (!result.finded) return;
+      if (turn.from.id === user_id) {
+        if (typeof turn.from?.turn === "undefined") {
+          turn.from.turn = true;
+          if ((turn?.to?.id + "").length > 0) {
+            turn.to.turn = false;
+          }
+        }
+        turn.from.payload = data;
+      } else if (turn?.to?.id === user_id) {
+        if (typeof turn?.to?.turn === "undefined") return;
+        turn.to.payload = data;
+      }
+      let res = await friendsMatch.findOneAndUpdate(
+        { _id: friendMatch._id },
+        {
+          turn,
+        },
+        { new: true }
+      );
+      return res;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async joinUserToFriendMatch(match_link, user = {}) {
     try {
       let players = await new FriendsMatchModel().getAllPlayers(match_link);
