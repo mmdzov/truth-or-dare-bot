@@ -30,6 +30,7 @@ const {
   joinUserToFriendMatch,
   getPlayersMatch,
   saveMessagePlayer,
+  sendMessageChangeTurn,
 } = require("../model/friends-match-model");
 const {
   getUserFriends,
@@ -966,9 +967,14 @@ ${ctx.message.text}`
       if (!result) return next();
       if (ignore_keyboards?.includes(ctx.message?.text)) return next();
       const saveMsgResult = await saveMessagePlayer(ctx.from.id, {
-        ...ctx.update.message,
+        ...ctx.message,
       });
       if (!saveMsgResult) return next();
+      let turn = {};
+      for (let i in saveMsgResult.turn) {
+        if (saveMsgResult.turn[i]?.turn) turn = saveMsgResult.turn[i];
+      }
+      if (turn?.id !== ctx.from.id) return next();
       await advanceSend(
         ctx,
         ctx.from.id + "",
@@ -980,10 +986,63 @@ ${ctx.message.text}`
       return next();
     });
 
-    bot.on("callback_query:data", (ctx, next) => {
+    bot.on("callback_query:data", async (ctx, next) => {
       if (!ctx.callbackQuery.data.includes("send_to_player")) return next();
-      //! then after send data we want to change turn player
+      let result = await sendMessageChangeTurn(ctx.from.id);
+      if (result?.player_notfound) {
+        ctx.answerCallbackQuery({
+          text: "بازیکن مقابل یافت نشد",
+        });
+        return next();
+      } else if (result?.turn === false) {
+        ctx.answerCallbackQuery({
+          text: "درحال حاظر نوبت شما نیست",
+        });
+        return next();
+      }
 
+      const { data } = result?.turn;
+      result.match.players.map(async (item) => {
+        if (item.id !== data.id) {
+          const payload = JSON.parse(result.turn.data.payload);
+          const turn = result.turn;
+          await advanceSend(
+            {
+              message: {
+                ...payload,
+                caption: `
+از طرف بازیکن ${turn.data.first_name} به بازیکن ${turn.prev_data.first_name}
+
+${payload?.caption}
+`,
+                text: `
+از طرف بازیکن ${turn.data.first_name} به بازیکن ${turn.prev_data.first_name}
+
+${payload?.text}
+`,
+              },
+            },
+            item.id + "",
+            new InlineKeyboard().row({
+              text: "گزارش پیغام",
+              callback_data: `report_player_friend_game ${ctx.from.id}`,
+            })
+          );
+          return;
+        }
+        ctx.answerCallbackQuery({
+          text: "پیغام شما ارسال شد",
+        });
+        ctx.editMessageReplyMarkup({
+          reply_markup: {
+            inline_keyboard: new InlineKeyboard().row({
+              text: "با موفقیت ارسال شده",
+              callback_data: "successfully_sended",
+            }).inline_keyboard,
+          },
+        });
+      });
+      return next();
     });
   }
 }

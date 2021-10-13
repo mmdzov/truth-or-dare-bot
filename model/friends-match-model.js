@@ -349,10 +349,10 @@ class FriendsMatchModel {
             turn.to.turn = false;
           }
         }
-        turn.from.payload = data;
+        turn.from.payload = JSON.stringify(data);
       } else if (turn?.to?.id === user_id) {
         if (typeof turn?.to?.turn === "undefined") return;
-        turn.to.payload = data;
+        turn.to.payload = JSON.stringify(data);
       }
       let res = await friendsMatch.findOneAndUpdate(
         { _id: friendMatch._id },
@@ -362,6 +362,56 @@ class FriendsMatchModel {
         { new: true }
       );
       return res;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async sendMessageChangeTurn(user_id) {
+    try {
+      const current_match = await new FriendsMatchModel().findFriendMatch(
+        user_id
+      );
+      let turn = {
+        data: "",
+        type: "",
+        prev_type: "",
+      };
+
+      for (let i in current_match.turn) {
+        if (current_match.turn[i].turn) {
+          const prev = i === "from" ? "to" : "from";
+          turn = {
+            data: current_match.turn[i],
+            prev_data: current_match.turn[prev],
+            type: i,
+            prev_type: prev,
+          };
+        }
+      }
+
+      if (
+        current_match.turn?.[turn.type].id !== user_id ||
+        current_match.turn?.[turn.type]?.turn === false
+      )
+        return { turn: false };
+      if (
+        !current_match.turn?.[turn.type]?.id ||
+        current_match.players.filter(
+          (item) => item.id === current_match.turn?.[turn.type].id
+        )?.length === 0
+      )
+        return { player_notfound: true };
+
+      current_match.turn[turn.type].turn = false;
+      current_match.turn[turn.prev_type].turn = true;
+      let result = await friendsMatch.findOneAndUpdate(
+        { _id: current_match._id },
+        {
+          turn: current_match.turn,
+        }
+      );
+      return { match: result, turn: turn || {} };
     } catch (e) {
       console.log(e);
     }
