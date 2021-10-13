@@ -367,6 +367,37 @@ class FriendsMatchModel {
     }
   }
 
+  async playerChangeTurn(user_id, ctx) {
+    try {
+      const match = await new FriendsMatchModel().findFriendMatch(user_id);
+      if (match.turn?.to?.id !== user_id) return { turn: false };
+      let index = match.players.findIndex(
+        (item) => item.id === match.turn.from.id
+      );
+      let i = !match.players[index + 1] ? 0 : index + 1;
+
+      let players = match.players.filter(
+        (item) => item.id !== !match.players[i].id
+      );
+      const rand = Math.floor(Math.random() * players.length);
+      const player = !players[rand] ? players[rand - 1] : players[rand];
+
+      const turn = {
+        from: { ...match.players[i], turn: true },
+        to: { ...player, turn: false },
+      };
+
+      const result = await friendsMatch.findOneAndUpdate(
+        { _id: match._id },
+        { turn },
+        { new: true }
+      );
+      return result;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async sendMessageChangeTurn(user_id) {
     try {
       const current_match = await new FriendsMatchModel().findFriendMatch(
@@ -402,7 +433,6 @@ class FriendsMatchModel {
         )?.length === 0
       )
         return { player_notfound: true };
-
       current_match.turn[turn.type].turn = false;
       current_match.turn[turn.prev_type].turn = true;
       let result = await friendsMatch.findOneAndUpdate(
