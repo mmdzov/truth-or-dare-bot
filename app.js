@@ -833,12 +833,12 @@ async function friendSelectMode(ctx, mode) {
   } else if (result?.not_turn) {
     ctx.reply("دوست من هنوز نوبتت نشده");
   }
-  
+
   const getTo = result.match.players.map((item) => {
     if (item.id === result.match.turn?.to?.id) {
       return item;
     }
-  });
+  })[0];
 
   ctx.reply(
     `${title} انتخاب شد منتظر باش دوستت ${

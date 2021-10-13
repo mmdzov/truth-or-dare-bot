@@ -13,10 +13,10 @@ const newGameFriendshipKeyboard = (
   match = {},
   mode = "private",
   isMe = false,
-  isEnabled = true,
+  isEnabled = true
 ) => {
   return new Keyboard()
-    .row(isEnabled ? match?.started ? (isMe ? "بپرس🗣" : "") : "" : "")
+    .row(isEnabled ? (match?.started ? (isMe ? "بپرس🗣" : "") : "") : "")
     .text("بازیکنان👥")
     .text(match?.started ? "" : "شروع بازی🎮")
     .row()
@@ -35,8 +35,17 @@ const newGameFriendshipKeyboard = (
     .text("لغو و بازگشت");
 };
 
-const newGameAdminKeyboard = (match, promoteData = {}, mode = "") => {
-  let keyboard = new Keyboard().text("بازیکنان👥").text("گفتگو💬");
+const newGameAdminKeyboard = (
+  match,
+  promoteData = {},
+  mode = "",
+  question = false
+) => {
+  let keyboard = new Keyboard()
+    .text(question ? "بپرس🗣" : "")
+    .row()
+    .text("بازیکنان👥")
+    .text("گفتگو💬");
   let datas = [
     [
       match?.started ? {} : { name: "start_game", title: "شروع بازی🎮" },

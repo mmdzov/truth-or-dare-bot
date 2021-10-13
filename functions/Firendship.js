@@ -31,6 +31,7 @@ const {
   getPlayersMatch,
   saveMessagePlayer,
   sendMessageChangeTurn,
+  playerChangeTurn,
 } = require("../model/friends-match-model");
 const {
   getUserFriends,
@@ -986,6 +987,7 @@ ${ctx.message.text}`
       return next();
     });
 
+    //! send message to player and run turn
     bot.on("callback_query:data", async (ctx, next) => {
       if (!ctx.callbackQuery.data.includes("send_to_player")) return next();
       let result = await sendMessageChangeTurn(ctx.from.id);
@@ -1025,7 +1027,7 @@ ${payload?.text}
             item.id + "",
             new InlineKeyboard().row({
               text: "گزارش پیغام",
-              callback_data: `report_player_friend_game ${ctx.from.id}`,
+              callback_data: `report_message_friend_game ${ctx.from.id}`,
             })
           );
           return;
@@ -1042,6 +1044,82 @@ ${payload?.text}
           },
         });
       });
+      const newTurn = await playerChangeTurn(ctx.from.id, ctx);
+      if (!newTurn?.turn) return;
+      const turn = newTurn?.turn;
+
+      newTurn?.players?.map((item) => {
+        if (turn.from.id === item.id) {
+          bot.api.sendMessage(
+            item.id,
+            `
+نوبت شما است تا از ${turn.to.first_name} بپرسید شجاعت یا حقیقت.
+برای پرسیدن روی دکمه بپرس بزنید`,
+            {
+              reply_markup: {
+                keyboard: item.isOwner
+                  ? newGameFriendshipKeyboard(
+                      newTurn,
+                      newTurn.mode,
+                      newTurn.turn.from.id === ctx.from.id
+                    ).keyboard
+                  : newGameAdminKeyboard(
+                      newTurn,
+                      item.admin,
+                      newTurn.mode,
+                      true
+                    ).keyboard,
+                resize_keyboard: true,
+              },
+            }
+          );
+        } else if (turn.to.id === item.id) {
+          bot.api.sendMessage(
+            item.id,
+            `
+نوبت شما است تا بازیکن ${turn.to.first_name} از شما بپرسد شجاعت یا حقیقت.
+لطفا کمی منتظر بمانید تا از شما بپرسد`,
+            {
+              reply_markup: {
+                keyboard: item.isOwner
+                  ? newGameFriendshipKeyboard(newTurn, newTurn.mode, false)
+                      .keyboard
+                  : newGameAdminKeyboard(
+                      newTurn,
+                      item.admin,
+                      newTurn.mode,
+                      false
+                    ).keyboard,
+                resize_keyboard: true,
+              },
+            }
+          );
+        } else {
+          bot.api.sendMessage(
+            item.id,
+            `نوبت ها تغییر کرد.
+درحال حاظر ${newTurn.turn.from.first_name} از ${newTurn.turn.to.first_name} می پرسه شجاعت یا حقیقت`,
+            {
+              reply_markup: {
+                keyboard: item.isOwner
+                  ? newGameFriendshipKeyboard(newTurn, newTurn.mode, false)
+                      .keyboard
+                  : newGameAdminKeyboard(newTurn, item.admin, newTurn.mode)
+                      .keyboard,
+                resize_keyboard: true,
+              },
+            }
+          );
+        }
+      });
+      return next();
+    });
+
+    //! player report message
+    bot.on("callback_query:data", (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("report_message_friend_game"))
+        return next();
+
       return next();
     });
   }
