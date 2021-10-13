@@ -377,8 +377,9 @@ class FriendsMatchModel {
       let i = !match.players[index + 1] ? 0 : index + 1;
 
       let players = match.players.filter(
-        (item) => item.id !== !match.players[i].id
+        (item) => item.id !== match.players[i].id
       );
+
       const rand = Math.floor(Math.random() * players.length);
       const player = !players[rand] ? players[rand - 1] : players[rand];
 

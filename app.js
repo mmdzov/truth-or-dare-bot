@@ -834,13 +834,15 @@ async function friendSelectMode(ctx, mode) {
     ctx.reply("دوست من هنوز نوبتت نشده");
   }
 
-  const getTo = result.match.players.map((item) => {
-    if (item.id === result.match.turn?.to?.id) {
-      return item;
-    }
-  })[0];
+  const getTo = result.match.players
+    .map((item) => {
+      if (item.id === result.match.turn?.to?.id) {
+        return item;
+      }
+    })
+    .filter((item) => item)[0];
 
-  ctx.reply(
+    ctx.reply(
     `${title} انتخاب شد منتظر باش دوستت ${
       mode === "dare" ? "بهت بگه چیکار کنی" : "ازت سوال بپرسه"
     }`,
@@ -1409,7 +1411,7 @@ bot.command("comeback", async (ctx, next) => {
   if (!match) {
     const match = await findMatch(ctx.from.id);
     if (!match) {
-      //!...
+      //!...group match and other
       return next();
     }
     ctx.reply("به منوی بازی برگشتی", {
