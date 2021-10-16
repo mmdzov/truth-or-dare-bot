@@ -32,7 +32,8 @@ const newGameFriendshipKeyboard = (
     .text("محدودیت بازی📝")
     .text("دریافت لینک بازی🗳")
     .row()
-    .text("لغو و بازگشت");
+    .text(match.started ? "حذف بازی" : "لغو و بازگشت")
+    .text(match.started ? "درخواست اتمام" : "");
 };
 
 const newGameAdminKeyboard = (
@@ -78,7 +79,7 @@ const newGameAdminKeyboard = (
   for (let i = 0; i < newData.length; i++) {
     keyboard.row(...newData[i]);
   }
-  keyboard.row().text("لغو و بازگشت");
+  keyboard.row().text(match.started ? "درخواست اتمام" : "لغو و بازگشت");
   return keyboard;
 };
 

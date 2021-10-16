@@ -13,6 +13,7 @@ const schema = new Schema({
   started: { type: Boolean, default: false },
   name: { type: String },
   mode: { type: String, default: "private" },
+  request_finish: { type: Array },
   created: { type: Number, default: Date.now() },
 });
 

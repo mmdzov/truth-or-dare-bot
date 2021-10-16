@@ -1,6 +1,7 @@
 const { InlineKeyboard, Keyboard } = require("grammy");
 const { customAlphabet } = require("nanoid");
 const bot = require("../config/require");
+const { getFriendRequest } = require("../keyboard/finish_game_keyboard");
 const {
   setAdminAccessLevel,
   newGameAdminKeyboard,
@@ -37,6 +38,9 @@ const {
   getUserFriends,
   addReport,
   getUserReports,
+  sendRequest,
+  acceptRequest,
+  rejectRequest,
 } = require("../model/user-model");
 const joinGame = require("../utils/joinGame");
 const general = require("./General");
@@ -60,6 +64,9 @@ let ignore_keyboards = [
   "محدودیت بازی📝",
   "دریافت لینک بازی🗳",
   "لغو و بازگشت",
+  "خروج از بازی",
+  "حذف بازی",
+  "درخواست اتمام",
   "شخصی کردن بازی🔑",
   "بپرس🗣",
   "عمومی کردن بازی🌍",
@@ -1120,6 +1127,90 @@ ${payload?.text}
       if (!ctx.callbackQuery.data.includes("report_message_friend_game"))
         return next();
 
+      return next();
+    });
+
+    //! send Request to add friend
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("send_request_add_friend"))
+        return next();
+      const userChat = await bot.api.getChat(
+        +ctx.callbackQuery.data.match(/[0-9]/g).join("")
+      );
+      const friends = await getUserFriends(ctx.from.id);
+      if (friends.includes(userChat.id)) {
+        ctx.answerCallbackQuery({ text: "بازیکن اکنون دوست شماست" });
+        return next();
+      }
+      let result = await sendRequest(ctx.from.id, userChat.id);
+      if (!result) {
+        ctx.answerCallbackQuery({
+          text: "شما یک بار درخواست دوستی فرستادید منتظر پاسخ بازیکن باشید",
+        });
+        return next();
+      }
+      bot.api.sendMessage(
+        userChat.id,
+        `یک بازیکن به نام ${ctx.callbackQuery.from.id} برای شما درخواست دوستی ارسال کرد`,
+        {
+          reply_markup: {
+            inline_keyboard: getFriendRequest(ctx.from.id).inline_keyboard,
+          },
+        }
+      );
+      ctx.answerCallbackQuery({
+        text: `درخواست دوستی برای بازیکن ${userChat.first_name} ارسال شد`,
+      });
+      return next();
+    });
+
+    //! accept request add friend
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("accept_request_to_add_friend"))
+        return next();
+      const userChat = await bot.api.getChat(
+        +ctx.callbackQuery.data.match(/[0-9]/g).join("")
+      );
+      let result = await acceptRequest(ctx.from.id, userChat.id);
+      if (result) {
+        await ctx.answerCallbackQuery({
+          text: `بازیکن ${userChat.first_name} به لیست دوستان شما اضاف شد`,
+        });
+
+        bot.api.sendMessage(
+          userChat.id,
+          `بازیکن ${ctx.from.first_name} درخواست دوستی شما را قبول کرد`
+        );
+        return next();
+      }
+      ctx.answerCallbackQuery({
+        text: "در قبول کردن درخواست دوستی مشکلی پیش آمد",
+      });
+      return next();
+    });
+
+    //! reject request add friend
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("reject_request_to_add_friend"))
+        return next();
+      const userChat = await bot.api.getChat(
+        +ctx.callbackQuery.data.match(/[0-9]/g).join("")
+      );
+      let result = await rejectRequest(ctx.from.id, userChat.id);
+      if (!result) {
+        ctx.answerCallbackQuery({
+          text: "در رد کردن درخواست دوستی مشکلی پیش آمد",
+        });
+        return next();
+      }
+      await ctx.answerCallbackQuery({
+        text: `درخواست دوستی لغو شد`,
+      });
+      ctx.deleteMessage();
+      bot.api.sendMessage(
+        userChat.id,
+        `بازیکن ${ctx.from.first_name} درخواست دوستی شما را رد کرد`
+      );
       return next();
     });
   }

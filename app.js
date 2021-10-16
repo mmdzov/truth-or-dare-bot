@@ -59,11 +59,15 @@ const {
   joinUserToFriendMatch,
   findFriendMatch,
   getMyFriends,
+  leaveFriendGame,
   friendMatchselectTruthOrDare,
+  requestToFinish,
+  cancelRequestToFinish,
 } = require("./model/friends-match-model");
 const Friendship = require("./functions/firendship");
 const joinGame = require("./utils/joinGame");
 const defaultSession = require("./session");
+const { finishGameKeyboard } = require("./keyboard/finish_game_keyboard");
 
 bot.use(hydrateContext());
 bot.api.config.use(hydrateApi());
@@ -677,9 +681,9 @@ bot.hears("حقیقت👻", async (ctx) => {
       },
     }
   );
-  let user = storage.read(user_turn.from.id + "");
+  // let user = storage.read(user_turn.from.id + "");
+  // storage.write(user_turn.from.id);
 
-  storage.write(user_turn.from.id);
   await selectTruthOrDare(ctx.from.id, null, true);
   const otherPlayers = match.players.filter(
     (item) =>
@@ -842,7 +846,7 @@ async function friendSelectMode(ctx, mode) {
     })
     .filter((item) => item)[0];
 
-    ctx.reply(
+  ctx.reply(
     `${title} انتخاب شد منتظر باش دوستت ${
       mode === "dare" ? "بهت بگه چیکار کنی" : "ازت سوال بپرسه"
     }`,
@@ -1155,7 +1159,9 @@ bot.hears("لغو گزارش", (ctx, next) => {
   return next();
 });
 
-bot.hears("خروج از بازی", (ctx, next) => {
+bot.hears("خروج از بازی", async (ctx, next) => {
+  const friendMatch = await findFriendMatch(ctx.from.id);
+  if (friendMatch) return next();
   ctx.session.player.leave_game = true;
   ctx.reply(
     `آیا اطمینان دارید؟
@@ -1173,14 +1179,142 @@ bot.hears("خروج از بازی", (ctx, next) => {
   return next();
 });
 
+bot.hears("درخواست اتمام", async (ctx, next) => {
+  const friendMatch = await findFriendMatch(ctx.from.id);
+  if (!friendMatch) return next();
+  let result = await requestToFinish(ctx.from.id);
+  if (result?.request) {
+    let requests = [];
+    for (let i in result.match.request_finish) {
+      let user = await bot.api.getChat(result.match.request_finish[i]);
+      requests.push(user.first_name);
+    }
+    ctx.reply(
+      `درخواست اتمام بازی توسط شما با موفقیت ثبت شد
+    
+${
+  result.match.request_finish.length > 0
+    ? `
+لیست بازیکنان درخواست های اتمام این بازی
+
+${requests.join("\n")}
+`
+    : ""
+}`,
+      {
+        reply_markup: {
+          inline_keyboard: new InlineKeyboard().row({
+            text: "لغو درخواست",
+            callback_data: `cancel_request_finish ${ctx.from.id}`,
+          }).inline_keyboard,
+        },
+      }
+    );
+    result.match.players.map((item) => {
+      if (item.id !== ctx.from.id) {
+        bot.api.sendMessage(
+          item.id,
+          `بازیکن ${ctx.from.first_name} درخواست اتمام بازی را ثبت کرد`
+        );
+      }
+    });
+  } else if (result?.matchDeleted) {
+    result.matchDeleted.players.map((item) => {
+      bot.api
+        .sendMessage(item.id, `بازی به اتمام رسید به منوی اصلی بازگشتید`, {
+          reply_markup: {
+            keyboard: mainKeyboard.keyboard,
+            resize_keyboard: true,
+          },
+        })
+        .then(async (res) => {
+          bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
+            reply_markup: {
+              inline_keyboard: await finishGameKeyboard(
+                result.match.players,
+                ctx.from.id
+              ).inline_keyboard,
+            },
+          });
+        });
+    });
+  }
+  return next();
+});
+
+bot.on("callback_query:data", (ctx, next) => {
+  if (!ctx.callbackQuery.data.includes("cancel_request_finish")) return next();
+  const result = cancelRequestToFinish(ctx.from.id);
+  if (result === false) return next();
+  if (result?.already_selected) {
+    ctx.answerCallbackQuery({
+      text: `شما قبلا درخواست اتمام بازی را لغو کردید`,
+    });
+  } else if (result?.cancel) {
+    ctx.answerCallbackQuery({
+      text: "درخواست اتمام بازی با موفقیت لغو شد",
+    });
+    result?.match?.players.map((item) => {
+      if (item.id !== ctx.from.id) {
+        bot.api.sendMessage(
+          item.id,
+          `بازیکن ${ctx.from.id} درخواست اتمام بازی را لغو کرد`
+        );
+      }
+    });
+  }
+  ctx.deleteMessage();
+  return next();
+});
+
 bot.hears("بله می خواهم خارج شوم", async (ctx, next) => {
+  if (!ctx.session.player.leave_game) return next();
   const match = await findMatch(ctx.from.id);
-  if (!match) return next();
+  if (!match) {
+    let result = await leaveFriendGame(ctx.from.id);
+    if (result?.not_exist) return next();
+    if (result?.matchDeleted) {
+      result.matchDeleted.players.map((item) => {
+        bot.api.sendMessage(
+          item.id,
+          `بازی به اتمام رسید به منوی اصلی بازگشتید`,
+          {
+            reply_markup: {
+              keyboard: mainKeyboard.keyboard,
+              resize_keyboard: true,
+            },
+          }
+        );
+        try {
+          let session_user = storage.read(item.id + "");
+          session_user = defaultSession;
+          storage.write(item.id + "", session_user);
+        } catch (e) {}
+      });
+      return next();
+    }
+    let { matchResult, user_turn } = result;
+    matchResult.players.map((item) => {
+      bot.api.sendMessage(
+        item.id,
+        `بازیکن ${ctx.from.first_name} از بازی خارج شد`
+      );
+    });
+    ctx.reply("از بازی خارج شدی و به منوی اصلی بازگشتی دوست من", {
+      reply_markup: {
+        keyboard: mainKeyboard.keyboard,
+        resize_keyboard: true,
+      },
+    });
+    return next();
+  }
+
   if (match.player_numbers === 2) {
     general.leaveGame(ctx);
   } else {
     general.leaveMultipleGame(ctx);
   }
+
   ctx.reply("از بازی خارج شدی و به منوی اصلی بازگشتی دوست من", {
     reply_markup: {
       keyboard: mainKeyboard.keyboard,
@@ -1193,6 +1327,7 @@ bot.hears("بله می خواهم خارج شوم", async (ctx, next) => {
 });
 
 bot.hears("خیر می خواهم ادامه دهم", async (ctx, next) => {
+  if (!ctx.session.player.leave_game) return next();
   ctx.session.player.leave_game = false;
   const match = await findMatch(ctx.from.id);
   if (!match) return next();
@@ -1453,4 +1588,5 @@ bot.on("message", async (ctx, next) => {
   mtp.playerSelectedTruthOrDare(ctx, storage);
   return next();
 });
+
 bot.start();

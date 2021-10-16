@@ -109,9 +109,10 @@ class FriendsMatchModel {
 
   async deleteMatch(user_id) {
     try {
-      const owner = await friendsMatch.findOne({ owner: user_id });
+      const owner = await friendsMatch.findOne({ owner: user_id + "" });
       if (owner) {
-        await friendsMatch.findOneAndDelete({ owner: user_id });
+        await friendsMatch.findOneAndDelete({ owner: user_id + "" });
+        return owner;
       }
     } catch (e) {
       console.log(e);
@@ -246,6 +247,54 @@ class FriendsMatchModel {
     } catch (e) {}
   }
 
+  async leaveFriendGame(user_id) {
+    const fmm = new FriendsMatchModel();
+    try {
+      const match = await fmm.findFriendMatch(user_id);
+      if (!match) return { not_exist: true };
+      const turn = match.turn;
+      let user_turn = { type: "", data: {}, turn: {} };
+      if (+match.owner === user_id) {
+        let matchDeleted = await fmm.deleteMatch(user_id);
+        return { matchDeleted };
+      }
+
+      for (let i in turn) {
+        if (turn[i].id === user_id) {
+          user_turn = { type: i, data: turn[i] };
+        }
+      }
+
+      let players = match.players.filter((item) => item.id !== user_id);
+
+      const userIndex = match.players.findIndex(
+        (item) => item.id === user_turn.data?.id
+      );
+
+      if (userIndex !== -1 && user_turn.type.length > 0) {
+        const from = players[userIndex] ? players[userIndex] : players[0];
+        let to = players.filter((item) => item.id !== from.id);
+        to = to[Math.floor(Math.random() * to.length)];
+        user_turn.turn = { from, to };
+      } else {
+        user_turn.turn = match.turn;
+      }
+
+      if (players.length <= 1 && user_turn.type?.length > 0) {
+        user_turn.turn[user_turn.type] = {};
+      }
+
+      let matchResult = await friendsMatch.findOneAndUpdate(
+        { _id: match?._id },
+        { players, turn: user_turn.turn },
+        { new: true }
+      );
+      return { matchResult, user_turn };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async changePlayerAccess(user_id, access_key) {
     try {
       const getMatchs = await friendsMatch.find({});
@@ -367,7 +416,7 @@ class FriendsMatchModel {
     }
   }
 
-  async playerChangeTurn(user_id, ctx) {
+  async playerChangeTurn(user_id) {
     try {
       const match = await new FriendsMatchModel().findFriendMatch(user_id);
       if (match.turn?.to?.id !== user_id) return { turn: false };
@@ -448,6 +497,54 @@ class FriendsMatchModel {
     }
   }
 
+  async requestToFinish(user_id) {
+    const fmm = new FriendsMatchModel();
+    try {
+      const match = await fmm.findFriendMatch(user_id);
+      !match?.request_finish
+        ? (match.request_finish = [])
+        : match.request_finish;
+      if (match.request_finish.includes(user_id))
+        return { already_exist: true };
+      match.request_finish.push(user_id);
+
+      const result = await friendsMatch.findOneAndUpdate(
+        { _id: match._id },
+        { request_finish: match.request_finish },
+        { new: true }
+      );
+
+      const dividedByTwoOfAllPlayers = result.players.length / 2;
+      const compare =
+        result.request_finish.length >= Math.ceil(dividedByTwoOfAllPlayers);
+      if (compare) {
+        await fmm.deleteMatch(+match.owner);
+        return { matchDeleted: result };
+      }
+      return { match: result, request: true };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  
+  async cancelRequestToFinish(user_id) {
+    try {
+      const match = await new FriendsMatchModel().findFriendMatch(user_id);
+      if (!match) return false;
+      if (!match.request_finish.includes(user_id)) {
+        return { already_canceled: true };
+      }
+      const requests = match.request_finish.filter((item) => item !== user_id);
+      await friendsMatch.findOneAndUpdate(
+        { _id: match._id },
+        { request_finish: requests }
+      );
+      return { cancel: true, match };
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async joinUserToFriendMatch(match_link, user = {}) {
     try {
       let players = await new FriendsMatchModel().getAllPlayers(match_link);
@@ -463,7 +560,7 @@ class FriendsMatchModel {
           "1234567890abcdefghijklmnopqrstuvwxyzQWERTYUIOPASDFGHJKLZXCVBNM",
           12
         )(),
-        turn: true,
+        // turn: true,
         date: Math.floor(Date.now() / 1000),
         hiddenMessages: [],
         limits: [],
@@ -481,12 +578,41 @@ class FriendsMatchModel {
         },
       });
 
+      let user_turn = { turn: false, data: {}, turn_type: "" };
+
+      for (let i in match.turn) {
+        if (
+          Object.keys(match.turn[i])?.length === 0 ||
+          match.players.filter((item) => item.id === match.turn[i]?.id)
+            .length === 0
+        ) {
+          if (Object.keys(match.turn?.to)?.length > 0) {
+            match.turn.to = {
+              ...match.turn.to,
+              payload: {},
+              turn: false,
+            };
+          }
+
+          match.turn[i] = {
+            turn: i === "from",
+            ...user,
+          };
+
+          user_turn = {
+            turn: match.turn[i].turn,
+            data: match.turn[i],
+            turn_type: i,
+          };
+        }
+      }
+
       let result = await friendsMatch.findOneAndUpdate(
         { secret_link: match_link },
         { players: match.players, turn: match.turn },
         { new: true }
       );
-      return { players: match.players, joined: true, match };
+      return { players: match.players, joined: true, match, user_turn };
     } catch (e) {
       console.log(e);
     }
