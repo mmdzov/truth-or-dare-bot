@@ -114,6 +114,7 @@ class FriendsMatchModel {
         await friendsMatch.findOneAndDelete({ owner: user_id + "" });
         return owner;
       }
+      return false
     } catch (e) {
       console.log(e);
     }

@@ -1,7 +1,10 @@
 const { InlineKeyboard, Keyboard } = require("grammy");
 const { customAlphabet } = require("nanoid");
 const bot = require("../config/require");
-const { getFriendRequest } = require("../keyboard/finish_game_keyboard");
+const {
+  getFriendRequest,
+  finishGameKeyboard,
+} = require("../keyboard/finish_game_keyboard");
 const {
   setAdminAccessLevel,
   newGameAdminKeyboard,
@@ -34,6 +37,7 @@ const {
   sendMessageChangeTurn,
   playerChangeTurn,
 } = require("../model/friends-match-model");
+const { deleteMatch } = require("../model/match-model");
 const {
   getUserFriends,
   addReport,
@@ -1211,6 +1215,59 @@ ${payload?.text}
         userChat.id,
         `بازیکن ${ctx.from.first_name} درخواست دوستی شما را رد کرد`
       );
+      return next();
+    });
+
+    //! delete game notification
+    bot.hears("حذف بازی", async (ctx, next) => {
+      const friendMatch = await findFriendMatch(ctx.from.id);
+      if (!friendMatch) return next();
+      if (ctx.from.id !== +friendMatch.owner) return next();
+      ctx.reply("آیا واقعا می خواهید بازی فعلی حذف شود؟", {
+        reply_markup: {
+          inline_keyboard: new InlineKeyboard().row(
+            { text: "خیر", callback_data: "no_deleteGame" },
+            { text: "بله حذف شود", callback_data: "yes_deleteGame" }
+          ).inline_keyboard,
+        },
+      });
+      return next();
+    });
+
+    //! cancel delete game
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("no_deleteGame")) return next();
+      ctx.answerCallbackQuery({
+        text: "حذف بازی لغو شد",
+      });
+      ctx.deleteMessage();
+      return next();
+    });
+
+    //! force delete game
+    bot.on("callback_query:data", async (ctx, next) => {
+      if (!ctx.callbackQuery.data.includes("yes_deleteGame")) return next();
+      const result = await deleteMatch(ctx.from.id);
+      if (result === false) return next();
+      result.players.map((item) => {
+        bot.api
+          .sendMessage(item.id, `بازی به اتمام رسید به منوی اصلی بازگشتید`, {
+            reply_markup: {
+              keyboard: mainKeyboard.keyboard,
+              resize_keyboard: true,
+            },
+          })
+          .then(async (res) => {
+            bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
+              reply_markup: {
+                inline_keyboard: await finishGameKeyboard(
+                  result.players,
+                  ctx.from.id
+                ).inline_keyboard,
+              },
+            });
+          });
+      });
       return next();
     });
   }
