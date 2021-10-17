@@ -36,6 +36,27 @@ class FriendsMatchModel {
     }
   }
 
+  async leavePlayerBeforeStart(user_id) {
+    try {
+      const current_match = await new FriendsMatchModel().findFriendMatch(
+        user_id
+      );
+      if (!current_match) return false;
+      if (current_match.started) return false;
+      const players = current_match.players.filter(
+        (item) => item.id !== user_id
+      );
+      const result = await friendsMatch.findOneAndUpdate(
+        { _id: current_match._id },
+        { players },
+        { new: true }
+      );
+      return result;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async friendMatchselectTruthOrDare(user_id, mode = "") {
     try {
       const friendMatch = await new FriendsMatchModel().findFriendMatch(
@@ -114,7 +135,7 @@ class FriendsMatchModel {
         await friendsMatch.findOneAndDelete({ owner: user_id + "" });
         return owner;
       }
-      return false
+      return false;
     } catch (e) {
       console.log(e);
     }
@@ -527,7 +548,7 @@ class FriendsMatchModel {
       console.log(e);
     }
   }
-  
+
   async cancelRequestToFinish(user_id) {
     try {
       const match = await new FriendsMatchModel().findFriendMatch(user_id);

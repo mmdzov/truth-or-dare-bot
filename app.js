@@ -264,7 +264,9 @@ bot.on("callback_query:data", async (ctx, next) => {
       ctx.answerCallbackQuery({
         text: "دیگر دوستی ندارید",
       });
-      ctx.deleteMessage();
+      try {
+        ctx.deleteMessage();
+      } catch (e) {}
       return next();
     }
 
@@ -834,8 +836,10 @@ async function friendSelectMode(ctx, mode) {
     return;
   } else if (result?.not_found) {
     ctx.reply("بازی یافت نشد");
+    return next();
   } else if (result?.not_turn) {
     ctx.reply("دوست من هنوز نوبتت نشده");
+    return next();
   }
 
   const getTo = result.match.players
@@ -1228,12 +1232,13 @@ ${requests.join("\n")}
           },
         })
         .then(async (res) => {
+          let finishGameInlineKeyboard = await finishGameKeyboard(
+            result?.match?.players || result?.matchDeleted?.players,
+            ctx.from.id
+          );
           bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
             reply_markup: {
-              inline_keyboard: await finishGameKeyboard(
-                result.match.players,
-                ctx.from.id
-              ).inline_keyboard,
+              inline_keyboard: finishGameInlineKeyboard.inline_keyboard,
             },
           });
         });
@@ -1263,7 +1268,9 @@ bot.on("callback_query:data", (ctx, next) => {
       }
     });
   }
-  ctx.deleteMessage();
+  try {
+    ctx.deleteMessage();
+  } catch (e) {}
   return next();
 });
 

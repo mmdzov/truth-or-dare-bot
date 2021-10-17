@@ -29,7 +29,6 @@ const newGameFriendshipKeyboard = (
     .row()
     .text("ایجاد/تغییر لینک سریع🔏")
     .row()
-    .text("محدودیت بازی📝")
     .text("دریافت لینک بازی🗳")
     .row()
     .text(match.started ? "حذف بازی" : "لغو و بازگشت")
@@ -65,10 +64,7 @@ const newGameAdminKeyboard = (
     ],
     [{ name: "change_link", title: "ایجاد/تغییر لینک اختصاصی🔏" }],
     [{ name: "change_link", title: "ایجاد/تغییر لینک سریع🔏" }],
-    [
-      { name: "read_write_limits", title: "محدودیت بازی📝" },
-      { name: "get_link", title: "دریافت لینک بازی🗳" },
-    ],
+    [{ name: "get_link", title: "دریافت لینک بازی🗳" }],
   ];
   let newData = datas
     .map((item) => {
@@ -79,7 +75,7 @@ const newGameAdminKeyboard = (
   for (let i = 0; i < newData.length; i++) {
     keyboard.row(...newData[i]);
   }
-  keyboard.row().text(match.started ? "درخواست اتمام" : "لغو و بازگشت");
+  keyboard.row().text(match.started ? "درخواست اتمام" : "خروج");
   return keyboard;
 };
 
@@ -129,7 +125,6 @@ const setAdminAccessLevel = (user_id, promote) => {
   let keyboard = new InlineKeyboard();
   let keys = [
     { text: "اطلاع به دوستان", callback_data: `can_notify_friends ${user_id}` },
-    { text: "شروع بازی", callback_data: `can_start_game ${user_id}` },
     {
       text: "تغییر حالت بازی",
       callback_data: `can_change_game_mode ${user_id}`,
@@ -142,7 +137,6 @@ const setAdminAccessLevel = (user_id, promote) => {
       text: "تغییر محدودیت بازی",
       callback_data: `can_read_write_limits ${user_id}`,
     },
-    { text: "محدودیت بازیکن", callback_data: `can_limit_player ${user_id}` },
   ];
   for (let i = 0; i < keys.length; i++) {
     let trimCan = keys[i].callback_data

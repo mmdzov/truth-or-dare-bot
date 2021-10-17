@@ -36,6 +36,7 @@ const {
   saveMessagePlayer,
   sendMessageChangeTurn,
   playerChangeTurn,
+  leavePlayerBeforeStart,
 } = require("../model/friends-match-model");
 const { deleteMatch } = require("../model/match-model");
 const {
@@ -59,13 +60,13 @@ let ignore_keyboards = [
   "🚷ترک بازی",
   "بازگشت",
   "بازیکنان👥",
+  "خروج",
   "شروع بازی🎮",
   "گفتگو💬",
   "اطلاع به دوستان📣",
   "محدودیت بازی📝",
   "ایجاد/تغییر لینک اختصاصی🔏",
   "ایجاد/تغییر لینک سریع🔏",
-  "محدودیت بازی📝",
   "دریافت لینک بازی🗳",
   "لغو و بازگشت",
   "خروج از بازی",
@@ -484,7 +485,10 @@ ${datas[index].title} برای شما ${
       let fm = await findFriendMatch(userId);
       let res = await joinUserToFriendMatch(fm.secret_link, ctx.from);
       await joinGame(ctx, res);
-      ctx.deleteMessage();
+
+      try {
+        ctx.deleteMessage();
+      } catch (e) {}
       return next();
     });
 
@@ -500,7 +504,9 @@ ${datas[index].title} برای شما ${
       await ctx.answerCallbackQuery({
         text: "دعوت بازی توسط شما لغو شد",
       });
-      await ctx.deleteMessage();
+      try {
+        ctx.deleteMessage();
+      } catch (e) {}
       return next();
     });
 
@@ -820,7 +826,9 @@ ${ctx.message.text}`
       });
       ctx.reply("پیام شما برای تمام بازیکنان ارسال شد").then((res) => {
         setTimeout(() => {
-          bot.api.deleteMessage(res.message_id);
+          try {
+            bot.api.deleteMessage(res.message_id);
+          } catch (e) {}
         }, 1500);
       });
       return next();
@@ -828,6 +836,7 @@ ${ctx.message.text}`
 
     //! limit game
     bot.hears("محدودیت بازی📝", async (ctx, next) => {
+      return next();
       const match = await findFriendMatch(ctx.from.id);
       if (!match) return next();
       if (
@@ -1026,12 +1035,12 @@ ${ctx.message.text}`
                 caption: `
 از طرف بازیکن ${turn.data.first_name} به بازیکن ${turn.prev_data.first_name}
 
-${payload?.caption}
+${payload?.caption ?? ""}
 `,
                 text: `
 از طرف بازیکن ${turn.data.first_name} به بازیکن ${turn.prev_data.first_name}
 
-${payload?.text}
+${payload?.text ?? ""}
 `,
               },
             },
@@ -1059,12 +1068,21 @@ ${payload?.text}
       if (!newTurn?.turn) return;
       const turn = newTurn?.turn;
 
-      newTurn?.players?.map((item) => {
-        if (turn.from.id === item.id) {
+      let turnIds = [];
+
+      for (let i in turn) {
+        turnIds.push(turn[i].id);
+        if (turn[i]?.turn === true) {
+          const item = newTurn.players.filter(
+            (item) => item.id === turn[i].id
+          )[0];
+
           bot.api.sendMessage(
             item.id,
             `
-نوبت شما است تا از ${turn.to.first_name} بپرسید شجاعت یا حقیقت.
+نوبت شما است تا از ${
+              turn[i === "from" ? "to" : "from"].first_name
+            } بپرسید شجاعت یا حقیقت.
 برای پرسیدن روی دکمه بپرس بزنید`,
             {
               reply_markup: {
@@ -1072,7 +1090,7 @@ ${payload?.text}
                   ? newGameFriendshipKeyboard(
                       newTurn,
                       newTurn.mode,
-                      newTurn.turn.from.id === ctx.from.id
+                      turn.from.id === ctx.from.id
                     ).keyboard
                   : newGameAdminKeyboard(
                       newTurn,
@@ -1084,11 +1102,13 @@ ${payload?.text}
               },
             }
           );
-        } else if (turn.to.id === item.id) {
+        } else if (turn[i]?.turn === false) {
           bot.api.sendMessage(
             item.id,
             `
-نوبت شما است تا بازیکن ${turn.to.first_name} از شما بپرسد شجاعت یا حقیقت.
+نوبت شما است تا بازیکن ${
+              turn[i === "from" ? "to" : "from"].first_name
+            } از شما بپرسد شجاعت یا حقیقت.
 لطفا کمی منتظر بمانید تا از شما بپرسد`,
             {
               reply_markup: {
@@ -1105,11 +1125,14 @@ ${payload?.text}
               },
             }
           );
-        } else {
+        }
+      }
+      newTurn.players.map((item) => {
+        if (!turnIds.includes(item.id)) {
           bot.api.sendMessage(
             item.id,
             `نوبت ها تغییر کرد.
-درحال حاظر ${newTurn.turn.from.first_name} از ${newTurn.turn.to.first_name} می پرسه شجاعت یا حقیقت`,
+    درحال حاظر ${newTurn.turn.from.first_name} از ${newTurn.turn.to.first_name} می پرسه شجاعت یا حقیقت`,
             {
               reply_markup: {
                 keyboard: item.isOwner
@@ -1210,7 +1233,9 @@ ${payload?.text}
       await ctx.answerCallbackQuery({
         text: `درخواست دوستی لغو شد`,
       });
-      ctx.deleteMessage();
+      try {
+        ctx.deleteMessage();
+      } catch (e) {}
       bot.api.sendMessage(
         userChat.id,
         `بازیکن ${ctx.from.first_name} درخواست دوستی شما را رد کرد`
@@ -1240,7 +1265,9 @@ ${payload?.text}
       ctx.answerCallbackQuery({
         text: "حذف بازی لغو شد",
       });
-      ctx.deleteMessage();
+      try {
+        ctx.deleteMessage();
+      } catch (e) {}
       return next();
     });
 
@@ -1267,6 +1294,35 @@ ${payload?.text}
               },
             });
           });
+      });
+      return next();
+    });
+
+    //! leave game before start
+    bot.hears("خروج", async (ctx, next) => {
+      const match = await findFriendMatch(ctx.from.id);
+      if (!match) return next();
+      if (match.started) {
+        ctx.reply(
+          "بازی شروع شده تنها زمانی می توانیید خارج شوید که درخواست اتمام بازی را بدهید و با رای اکثریت بازی به اتمام برسد"
+        );
+        return next();
+      }
+      const result = await leavePlayerBeforeStart(ctx.from.id);
+      if (result === false) return next();
+      ctx.reply("شما از بازی خارج شدید و به منوی اصلی بازگشتید", {
+        reply_markup: {
+          keyboard: mainKeyboard.keyboard,
+          resize_keyboard: true,
+        },
+      });
+      result.players.map((item) => {
+        bot.api.sendMessage(
+          item.id,
+          `بازیکن ${ctx.from.first_name} از بازی خارج شد
+
+تعداد بازیکنان باقیمانده : ${result.players?.length}`
+        );
       });
       return next();
     });
