@@ -31,7 +31,7 @@ const newGameFriendshipKeyboard = (
     .row()
     .text("دریافت لینک بازی🗳")
     .row()
-    .text(match.started ? "حذف بازی" : "لغو و بازگشت")
+    .text("حذف بازی")
     .text(match.started ? "درخواست اتمام" : "");
 };
 

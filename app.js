@@ -1223,25 +1223,26 @@ ${requests.join("\n")}
       }
     });
   } else if (result?.matchDeleted) {
-    result.matchDeleted.players.map((item) => {
-      bot.api
-        .sendMessage(item.id, `بازی به اتمام رسید به منوی اصلی بازگشتید`, {
+    result.matchDeleted.players.map(async (item) => {
+      await bot.api.sendMessage(
+        item.id,
+        `بازی به اتمام رسید به منوی اصلی بازگشتید`,
+        {
           reply_markup: {
             keyboard: mainKeyboard.keyboard,
             resize_keyboard: true,
           },
-        })
-        .then(async (res) => {
-          const finishGameInlineKeyboard = await finishGameKeyboard(
-            result?.match?.players || result?.matchDeleted?.players,
-            ctx.from.id
-          );
-          bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
-            reply_markup: {
-              inline_keyboard: finishGameInlineKeyboard.inline_keyboard,
-            },
-          });
-        });
+        }
+      );
+      const finishGameInlineKeyboard = await finishGameKeyboard(
+        result?.match?.players || result?.matchDeleted?.players,
+        item.id
+      );
+      bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
+        reply_markup: {
+          inline_keyboard: finishGameInlineKeyboard.inline_keyboard,
+        },
+      });
     });
   }
   return next();

@@ -1237,7 +1237,7 @@ ${payload?.text ?? ""}
       }
       bot.api.sendMessage(
         userChat.id,
-        `یک بازیکن به نام ${ctx.callbackQuery.from.id} برای شما درخواست دوستی ارسال کرد`,
+        `یک بازیکن به نام ${ctx.callbackQuery.from.first_name} برای شما درخواست دوستی ارسال کرد`,
         {
           reply_markup: {
             inline_keyboard: getFriendRequest(ctx.from.id).inline_keyboard,
@@ -1347,12 +1347,7 @@ ${payload?.text ?? ""}
           }
         );
 
-        const finishedGame = await finishGameKeyboard(
-          result.players,
-          ctx.from.id
-        );
-
-        if (result.players.length === 1 && item.id === ctx.from.id) return;
+        const finishedGame = await finishGameKeyboard(result.players, item.id);
 
         bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
           reply_markup: {
@@ -1360,6 +1355,9 @@ ${payload?.text ?? ""}
           },
         });
       });
+      try {
+        ctx.deleteMessage();
+      } catch (e) {}
       return next();
     });
 
@@ -1369,7 +1367,7 @@ ${payload?.text ?? ""}
       if (!match) return next();
       if (match.started) {
         ctx.reply(
-          "بازی شروع شده تنها زمانی می توانیید خارج شوید که درخواست اتمام بازی را بدهید و با رای اکثریت بازی به اتمام برسد"
+          "بازی شروع شده تنها زمانی می توانید خارج شوید که درخواست اتمام بازی را بدهید و با رای اکثریت بازی به اتمام برسد"
         );
         return next();
       }
