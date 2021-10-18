@@ -16,6 +16,7 @@ const finishGameKeyboard = async (users = [], user_id) => {
         inline.text("➕", `send_request_add_friend ${item.id}`);
       }
     });
+  return inline;
 };
 
 const getFriendRequest = (user_id) => {

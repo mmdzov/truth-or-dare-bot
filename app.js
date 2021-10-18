@@ -1232,7 +1232,7 @@ ${requests.join("\n")}
           },
         })
         .then(async (res) => {
-          let finishGameInlineKeyboard = await finishGameKeyboard(
+          const finishGameInlineKeyboard = await finishGameKeyboard(
             result?.match?.players || result?.matchDeleted?.players,
             ctx.from.id
           );

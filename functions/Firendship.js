@@ -413,14 +413,23 @@ ${datas[index].title} برای شما ${
       if (!ctx.callbackQuery.data.includes("submit_notify_friend"))
         return next();
       if (ctx.callbackQuery.data.includes("ALL")) {
-        //! send request to all user friends
         let friends = await getUserFriends(ctx.from.id);
         if (friends?.length === 0) return next();
         let friendFiltered = [];
         for (let i = 0; i < friends?.length; i++) {
           let result = await checkUserInGame(friends[i]);
           if (!result?.user_in_game) {
-            friendFiltered.push(item);
+            friendFiltered.push(friends[i]);
+            await bot.api.sendMessage(
+              friends[i],
+              `دوستت ${ctx.from.first_name} تو رو به بازی دعوت کرده`,
+              {
+                reply_markup: {
+                  inline_keyboard: inviteToGameQuestion(ctx.from.id)
+                    .inline_keyboard,
+                },
+              }
+            );
           }
         }
 
@@ -431,9 +440,9 @@ ${datas[index].title} برای شما ${
           return next();
         }
 
-        if (friendFiltered.length === 1) {
+        if (friendFiltered.length >= 1) {
           ctx.answerCallbackQuery({
-            text: "پیغام دعوت برای دوستت ارسال شد",
+            text: "پیغام دعوت برای دوستات ارسال شد",
           });
         }
 
@@ -465,7 +474,7 @@ ${datas[index].title} برای شما ${
       );
 
       ctx.answerCallbackQuery({
-        text: `دعوت برای دوستت ارسال شد`,
+        text: `پیام دعوت برای دوستت ارسال شد`,
       });
       return next();
     });
@@ -1072,11 +1081,10 @@ ${payload?.text ?? ""}
 
       for (let i in turn) {
         turnIds.push(turn[i].id);
+        const item = newTurn.players.filter(
+          (item) => item.id === turn[i].id
+        )[0];
         if (turn[i]?.turn === true) {
-          const item = newTurn.players.filter(
-            (item) => item.id === turn[i].id
-          )[0];
-
           bot.api.sendMessage(
             item.id,
             `
@@ -1285,12 +1293,13 @@ ${payload?.text ?? ""}
             },
           })
           .then(async (res) => {
+            const finishedGame = await finishGameKeyboard(
+              result.players,
+              ctx.from.id
+            );
             bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
               reply_markup: {
-                inline_keyboard: await finishGameKeyboard(
-                  result.players,
-                  ctx.from.id
-                ).inline_keyboard,
+                inline_keyboard: finishedGame.inline_keyboard,
               },
             });
           });
