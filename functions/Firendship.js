@@ -1351,6 +1351,9 @@ ${payload?.text ?? ""}
           result.players,
           ctx.from.id
         );
+
+        if (result.players.length === 1 && item.id === ctx.from.id) return;
+
         bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
           reply_markup: {
             inline_keyboard: finishedGame.inline_keyboard,
