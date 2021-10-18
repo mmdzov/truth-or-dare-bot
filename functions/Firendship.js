@@ -38,7 +38,6 @@ const {
   playerChangeTurn,
   leavePlayerBeforeStart,
 } = require("../model/friends-match-model");
-const { deleteMatch } = require("../model/match-model");
 const {
   getUserFriends,
   addReport,
@@ -980,7 +979,7 @@ ${ctx.message.text}`
       const player = result.players.filter(
         (item) => item.id === result.turn.to.id
       )[0];
-      
+
       bot.api.sendMessage(
         result.turn.to.id,
         `
@@ -1321,7 +1320,7 @@ ${payload?.text ?? ""}
     //! cancel delete game
     bot.on("callback_query:data", async (ctx, next) => {
       if (!ctx.callbackQuery.data.includes("no_deleteGame")) return next();
-      ctx.answerCallbackQuery({
+      await ctx.answerCallbackQuery({
         text: "حذف بازی لغو شد",
       });
       try {
@@ -1335,25 +1334,27 @@ ${payload?.text ?? ""}
       if (!ctx.callbackQuery.data.includes("yes_deleteGame")) return next();
       const result = await deleteMatch(ctx.from.id);
       if (result === false) return next();
-      result.players.map((item) => {
-        bot.api
-          .sendMessage(item.id, `بازی به اتمام رسید به منوی اصلی بازگشتید`, {
+      result.players.map(async (item) => {
+        await bot.api.sendMessage(
+          item.id,
+          `بازی به اتمام رسید به منوی اصلی بازگشتید`,
+          {
             reply_markup: {
               keyboard: mainKeyboard.keyboard,
               resize_keyboard: true,
             },
-          })
-          .then(async (res) => {
-            const finishedGame = await finishGameKeyboard(
-              result.players,
-              ctx.from.id
-            );
-            bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
-              reply_markup: {
-                inline_keyboard: finishedGame.inline_keyboard,
-              },
-            });
-          });
+          }
+        );
+
+        const finishedGame = await finishGameKeyboard(
+          result.players,
+          ctx.from.id
+        );
+        bot.api.sendMessage(item.id, `لیست بازیکنان بازی قبلی`, {
+          reply_markup: {
+            inline_keyboard: finishedGame.inline_keyboard,
+          },
+        });
       });
       return next();
     });
