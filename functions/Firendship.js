@@ -46,6 +46,8 @@ const {
   sendRequest,
   acceptRequest,
   rejectRequest,
+  inviteToGame,
+  rejectInvite,
 } = require("../model/user-model");
 const joinGame = require("../utils/joinGame");
 const general = require("./General");
@@ -412,6 +414,10 @@ ${datas[index].title} برای شما ${
     bot.on("callback_query:data", async (ctx, next) => {
       if (!ctx.callbackQuery.data.includes("submit_notify_friend"))
         return next();
+      const match = await findFriendMatch(ctx.from.id);
+
+      let preventSendLength = 0;
+
       if (ctx.callbackQuery.data.includes("ALL")) {
         let friends = await getUserFriends(ctx.from.id);
         if (friends?.length === 0) return next();
@@ -419,7 +425,18 @@ ${datas[index].title} برای شما ${
         for (let i = 0; i < friends?.length; i++) {
           let result = await checkUserInGame(friends[i]);
           if (!result?.user_in_game) {
+            const inviteResult = await inviteToGame(friends[i], {
+              user_id: ctx.from.id,
+              match_id: match._id,
+            });
+
+            if (inviteResult?.already_sended) {
+              preventSendLength += 1;
+              continue;
+            }
+
             friendFiltered.push(friends[i]);
+
             await bot.api.sendMessage(
               friends[i],
               `دوستت ${ctx.from.first_name} تو رو به بازی دعوت کرده`,
@@ -431,6 +448,13 @@ ${datas[index].title} برای شما ${
               }
             );
           }
+        }
+
+        if (preventSendLength >= friends.length) {
+          ctx.answerCallbackQuery({
+            text: `قبلا به تمام دوستات درخواست فرستادی منتظر پاسخ باش`,
+          });
+          return next();
         }
 
         if (friendFiltered.length === 0) {
@@ -452,6 +476,7 @@ ${datas[index].title} برای شما ${
 
         return next();
       }
+
       const userId = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
 
       //! check user in game
@@ -463,6 +488,19 @@ ${datas[index].title} برای شما ${
         return next();
       }
       //! end check user in game
+
+      const inviteResult = await inviteToGame(userId, {
+        user_id: ctx.from.id,
+        match_id: match._id,
+      });
+
+      if (inviteResult?.already_sended) {
+        ctx.answerCallbackQuery({
+          text: "قبلا به این بازیکن درخواست فرستادی . منتظر باش تا به درخواستت پاسخ بده",
+        });
+        return next();
+      }
+
       bot.api.sendMessage(
         userId,
         `دوستت ${ctx.from.first_name} تو رو به بازی دعوت کرده`,
@@ -506,6 +544,7 @@ ${datas[index].title} برای شما ${
       if (!ctx.callbackQuery.data.includes(`reject_invite_join_game`))
         return next();
       const userId = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
+      await rejectInvite(ctx.from.id, userId);
       await bot.api.sendMessage(
         userId,
         `دوستت ${ctx.from.first_name} دعوت بازی رو رد کرد`

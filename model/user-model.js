@@ -58,6 +58,55 @@ class UserModel {
     }
   }
 
+  async inviteToGame(user_id, target = { user_id: "", match_id: "" }) {
+    try {
+      const current_user = await user.findOne({ user_id });
+      !current_user?.invite_game
+        ? (current_user.invite_game = [])
+        : current_user.invite_game;
+      let index = current_user.invite_game.findIndex(
+        (item) =>
+          item.user_id === target.user_id &&
+          item.match_id.toString() === target.match_id.toString()
+      );
+      if (index >= 0) return { already_sended: true };
+      current_user.invite_game.push(target);
+      await user.findOneAndUpdate(
+        { user_id },
+        {
+          invite_game: current_user.invite_game,
+        },
+        { new: true }
+      );
+      return true;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async rejectInvite(user_id, target_id) {
+    try {
+      const current_user = await user.findOne({ user_id });
+      const index = current_user.invite_game.findIndex(
+        (item) => item.user_id === target_id
+      );
+      if (index === -1) return { not_found: true };
+      const invite_game = current_user.invite_game.filter(
+        (item) => item.user_id !== target_id
+      );
+      await user.findOneAndUpdate(
+        { user_id },
+        {
+          invite_game,
+        },
+        { new: true }
+      );
+      return true;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async acceptRequest(user_id, target_id) {
     try {
       const getUser = await user.findOne({ user_id });

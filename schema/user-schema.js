@@ -10,6 +10,7 @@ let schema = new Schema({
   reports: { type: Array },
   friends: { type: Array },
   requests: { type: Array },
+  invite_game: { type: Array },
 });
 
 const user = mongoose.model("users", schema);
