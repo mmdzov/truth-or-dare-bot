@@ -425,6 +425,8 @@ ${datas[index].title} برای شما ${
         for (let i = 0; i < friends?.length; i++) {
           let result = await checkUserInGame(friends[i]);
           if (!result?.user_in_game) {
+            friendFiltered.push(friends[i]);
+
             const inviteResult = await inviteToGame(friends[i], {
               user_id: ctx.from.id,
               match_id: match._id,
@@ -434,8 +436,6 @@ ${datas[index].title} برای شما ${
               preventSendLength += 1;
               continue;
             }
-
-            friendFiltered.push(friends[i]);
 
             await bot.api.sendMessage(
               friends[i],
@@ -532,7 +532,7 @@ ${datas[index].title} برای شما ${
       let fm = await findFriendMatch(userId);
       let res = await joinUserToFriendMatch(fm.secret_link, ctx.from);
       await joinGame(ctx, res);
-
+      await rejectInvite(ctx.from.id, userId);
       try {
         ctx.deleteMessage();
       } catch (e) {}
