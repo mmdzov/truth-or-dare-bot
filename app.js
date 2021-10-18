@@ -604,7 +604,7 @@ bot.hears("بپرس شجاعت یا حقیقت؟", async (ctx, next) => {
   let match = await findMatch(ctx.from.id);
   if (!match || match.player_numbers !== 2) return next();
   let result = await mtp.checkHasSendedQuestion(ctx, match);
-  if (result === false) return;
+  if (result === false) return next();
   let turn = match.players[match.turn - 1];
   if (turn.user_id === ctx.from.id) {
     ctx.reply("ارسال شد منتظر جواب باش دوست من", {
@@ -629,10 +629,12 @@ bot.hears("بپرس شجاعت یا حقیقت؟", async (ctx, next) => {
 
 bot.hears("شجاعت👿", async (ctx) => {
   let match = await findMatch(ctx.from.id);
-  if (!match) return;
+  if (!match) return next();
   const user_turn = match?.question;
-  if (user_turn?.to?.id !== ctx.from.id)
-    return ctx.reply("هنوز نوبتت نشده دوست من");
+  if (user_turn?.to?.id !== ctx.from.id) {
+    ctx.reply("هنوز نوبتت نشده دوست من");
+    return next();
+  }
 
   ctx.session.player.truthOrDare.truth = false;
   ctx.session.player.truthOrDare.dare = true;
@@ -668,10 +670,12 @@ bot.hears("شجاعت👿", async (ctx) => {
 
 bot.hears("حقیقت👻", async (ctx) => {
   let match = await findMatch(ctx.from.id);
-  if (!match) return;
+  if (!match) return next();
   const user_turn = match?.question;
-  if (user_turn?.to?.id !== ctx.from.id)
-    return ctx.reply("هنوز نوبتت نشده دوست من");
+  if (user_turn?.to?.id !== ctx.from.id) {
+    ctx.reply("هنوز نوبتت نشده دوست من");
+    return next();
+  }
   ctx.session.player.truthOrDare.truth = false;
   ctx.session.player.truthOrDare.dare = true;
   ctx.reply(
@@ -709,9 +713,14 @@ const handleReportPlayer = async (ctx, next = () => {}) => {
   if (!match) return next();
   let target_id = +ctx.callbackQuery.data.match(/[0-9]/g).join("");
   let result = await checkUserReport(ctx.from.id, target_id);
-  if (result?.prevReported)
-    return ctx.reply("شما قبلا این بازیکن را گزارش داده اید");
-  if (result?.not_found) return ctx.reply(`کاربر در بازی وجود ندارد`);
+  if (result?.prevReported) {
+    ctx.reply("شما قبلا این بازیکن را گزارش داده اید");
+    return next();
+  }
+  if (result?.not_found) {
+    ctx.reply(`کاربر در بازی وجود ندارد`);
+    return next();
+  }
   const target = await bot.api.getChat(target_id);
   ctx.session.report_message = {
     ...target,
@@ -762,7 +771,7 @@ bot.hears("👥گفتگو با بازیکنان", async (ctx, next) => {
 bot.hears("🗣گفتگو با بازیکن خاص", async (ctx) => {
   const match = await findMatch(ctx.from.id);
   let data = [];
-  if (!match) return;
+  if (!match) return next();
   const players = match.players.filter((item) => item.user_id !== ctx.from.id);
   for (let i = 0; i < players.length; i++) {
     let u = await bot.api.getChat(players[i].user_id);
@@ -833,7 +842,7 @@ async function friendSelectMode(ctx, mode) {
     ctx.reply(
       "دوست من تو قبلا یک گزینه رو انتخاب کردی باید منتظر باشی که دوستت بهت بگه چیکار کنی"
     );
-    return;
+    return next();
   } else if (result?.not_found) {
     ctx.reply("بازی یافت نشد");
     return next();
@@ -998,7 +1007,7 @@ bot.hears("گزارش بازیکن", async (ctx, next) => {
 bot.hears("⚠️گزارش بازیکن", async (ctx, next) => {
   const match = await findMatch(ctx.from.id);
   let data = [];
-  if (!match) return;
+  if (!match) return next();
   const players = match.players.filter((item) => item.user_id !== ctx.from.id);
   for (let i = 0; i < players.length; i++) {
     let u = await bot.api.getChat(players[i].user_id);
@@ -1143,7 +1152,7 @@ bot.hears("ثبت گزارش", async (ctx, next) => {
 bot.hears("لغو گزارش", (ctx, next) => {
   if (Object.keys(ctx.session.report_message).length > 0) {
     ctx.session.process.report_player = false;
-    return ctx.reply("گزارش لغو شد به منوی بازی برگشتید", {
+    ctx.reply("گزارش لغو شد به منوی بازی برگشتید", {
       reply_markup: {
         keyboard: ctx.session.report_message.hasTurn
           ? multiplayerMatchCurrentUserKeyboard.keyboard
@@ -1151,6 +1160,7 @@ bot.hears("لغو گزارش", (ctx, next) => {
         resize_keyboard: true,
       },
     });
+    return next() 
   }
   ctx.session.player.report = false;
   ctx.session.player.report_message = {};
@@ -1419,9 +1429,9 @@ bot.hears("لغو گفتگو", (ctx, next) => {
 bot.hears("آقا", async (ctx, next) => {
   if (ctx.session.selectTargetGender) {
     new DuoPlay(ctx).handleStartQueue(ctx, 2, "آقا");
-    return;
+    return next();
   }
-  if (!ctx.session.selectGender) return;
+  if (!ctx.session.selectGender) return next();
   selectGenderUser(ctx.from.id, "آقا");
   ctx.reply(`جنسیت انتخاب شده : آقا`, {
     reply_markup: {
@@ -1436,9 +1446,9 @@ bot.hears("آقا", async (ctx, next) => {
 bot.hears("خانم", async (ctx, next) => {
   if (ctx.session.selectTargetGender) {
     new DuoPlay(ctx).handleStartQueue(ctx, 2, "خانم");
-    return;
+    return next();
   }
-  if (!ctx.session.selectGender) return;
+  if (!ctx.session.selectGender) return next();
   selectGenderUser(ctx.from.id, "خانم");
   ctx.reply(`جنسیت انتخاب شده : خانم`, {
     reply_markup: {
