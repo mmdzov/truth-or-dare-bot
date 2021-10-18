@@ -976,10 +976,22 @@ ${ctx.message.text}`
         }
       });
       if (!result?.turn?.to) return next();
+
+      const player = result.players.filter(
+        (item) => item.id === result.turn.to.id
+      )[0];
+      
       bot.api.sendMessage(
         result.turn.to.id,
         `
-قراره ${result.turn.from.first_name} تو رو به چالش بکشونه منتظر باش ازت بپرسه شجاعت یا حقیقت`
+قراره ${result.turn.from.first_name} تو رو به چالش بکشونه منتظر باش ازت بپرسه شجاعت یا حقیقت`,
+        {
+          reply_markup: {
+            keyboard: newGameAdminKeyboard(result, player.admin, result.mode)
+              .keyboard,
+            resize_keyboard: true,
+          },
+        }
       );
 
       result.players.map((item) => {
