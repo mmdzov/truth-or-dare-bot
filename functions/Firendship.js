@@ -37,6 +37,7 @@ const {
   sendMessageChangeTurn,
   playerChangeTurn,
   leavePlayerBeforeStart,
+  deleteMatch,
 } = require("../model/friends-match-model");
 const {
   getUserFriends,
